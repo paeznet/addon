@@ -196,6 +196,10 @@
       {
         "pattern": "(https://(?:www.|)bustybus.com/video\\?play=[0-9]+)",
         "url": "\\1"
+      },
+      {
+        "pattern": "(https://iceyfile.com/video/embed/[A-z0-9]+/[0-9x]+)",
+        "url": "\\1/a"
       }
     ]
   },
