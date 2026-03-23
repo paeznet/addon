@@ -102,7 +102,9 @@ def lista(item):
         if "videos" in item.url:
             plot = ""
         else:
-            plot = elem.find('div', class_='info').text.strip()
+            plot = elem.find('div', class_='sinopsis')
+            if plot:
+                plot = plot.text.strip()
         itemlist.append(Item(channel=item.channel, action="findvideos", title=title, url=url, thumbnail=thumbnail,
                                plot=plot, fanart=thumbnail, contentTitle=title ))
     next_page = soup.find('span', class_='current')
@@ -146,6 +148,11 @@ def findvideos(item):
         elif "ntu" in ser:
             url = "https://hqq.to/e/%s" % id
             itemlist.append(Item(channel=item.channel, action="play", title= "%s", contentTitle = item.title, url=url))
+        elif "kra" in ser:
+            continue
+            # https://github.com/tha23rd/py-kraken/blob/main/pykraken/kraken.py
+            # url = "https://krakenfiles.com/embed-video/%s" % id
+            # itemlist.append(Item(channel=item.channel, action="play", title= "%s", contentTitle = item.title, url=url))
         else:
             platformtools.dialog_ok("Server Nuevo", "Server nuevo en este canal [%s]" %ser)
     itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
