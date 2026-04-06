@@ -21,7 +21,6 @@ list_servers = []
 forced_proxy_opt = ''
 timeout = 45
 
-#### ImputStream FFmpeg
 
 canonical = {
              'channel': 'camsoda', 

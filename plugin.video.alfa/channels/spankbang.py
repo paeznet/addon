@@ -92,6 +92,7 @@ def categorias(item):
         if thumbnail.startswith("//"):
             thumbnail = "https:%s" % thumbnail
         # thumbnail += "|Referer=%s" % host
+        
         url =  urlparse.urljoin(item.url,url)
         url += "?o=new"
         plot = ""
