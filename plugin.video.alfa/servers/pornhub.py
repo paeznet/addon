@@ -23,7 +23,8 @@ def test_video_exists(page_url):
                }
     response = httptools.downloadpage(page_url, headers=headers, **kwargs)
     data = response.data
-    if not response.sucess or "Not Found" in data or "flagged for  " in data or "Video Disabled" in data or "<div class=\"removed\">" in data or "is unavailable" in data:
+    if not response.sucess or "Not Found" in data or "flagged for  " in data or "Video Disabled" in data or "Video deshabilitado" in data\
+                           or "<div class=\"removed\">" in data or "is unavailable" in data:
         return False, "[pornhub] El fichero no existe o ha sido borrado"
     if "premiumLocked" in data:
         return False, "[pornhub] Cuenta premium"

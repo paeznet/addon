@@ -44,10 +44,10 @@ def mainlist(item):
     itemlist.append(Item(channel=item.channel, title="Mas vistos" , action="lista", url=host + "?order=views_month"))
     itemlist.append(Item(channel=item.channel, title="Mas comentado" , action="lista", url=host + "?order=comments_month"))
     itemlist.append(Item(channel=item.channel, title="Categorias" , action="categorias", url=host + "categories"))
+    itemlist.append(Item(channel=item.channel, title="Buscar", action="search"))
     
     autoplay.show_option(item.channel, itemlist)
     
-    itemlist.append(Item(channel=item.channel, title="Buscar", action="search"))
     return itemlist
 
 
@@ -152,4 +152,7 @@ def findvideos(item):
         url = soup.find('div', class_='video-container').iframe['src']
         itemlist.append(Item(channel=item.channel, action="play", title="%s", contentTitle = item.contentTitle, url=url) )
     itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
+    
+    # Requerido para AutoPlay
+    autoplay.start(itemlist, item)
     return itemlist
