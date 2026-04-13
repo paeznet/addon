@@ -4,14 +4,14 @@
     "ignore_urls": [],
     "patterns": [
       {
-        "pattern": "(https://www.camsoda.com/api/v1/video/vtoken/[A-z0-9-]+)",
-        "url": "\\1?username=guest_22596"
+        "pattern": "https://krakenfiles.com/(?:embed-video|view)/([A-z0-9_]+)",
+        "url": "https://krakenfiles.com/embed-video/\\1"
       }
     ]
   },
   "free": true,
-  "id": "camsoda",
-  "name": "camsoda",
+  "id": "krakenfiles",
+  "name": "krakenfiles",
   "settings": [
     {
       "default": false,
@@ -38,6 +38,6 @@
       "visible": false
     }
   ],
-  "thumbnail": "https://cachew.camsoda.com/assets/img/camsoda-logo-160x50.png",
+  "thumbnail": "https://krakenfiles.com/images/kf_logo_dark.png",
   "force_inputstream": "adaptive"
 }

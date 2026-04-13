@@ -40,5 +40,8 @@ def get_video_url(page_url, video_password):
         url = "https://%s/%s_v1/index.m3u8?token=%s" %(server[0],dir,token)
     # url += "|verifypeer=false"
     # url += "|Referer=%s" % page_url
+    host = "https://www.camsoda.com"
+    headers = httptools.default_headers.copy()
+    url += "|%s&Referer=%s/&Origin=%s" % (urlparse.urlencode(headers), host, host)
     video_urls.append(["[camsoda]", url])
     return video_urls
