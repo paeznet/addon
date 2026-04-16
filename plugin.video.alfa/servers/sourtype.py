@@ -18,11 +18,12 @@ def test_video_exists(page_url):
     domain = scrapertools.get_domain_from_url(page_url)
     host = "https://%s" % domain
     server = domain.split(".")[-2]
-    # server = scrapertools.get_domain_from_url(page_url).split(".")[-2]
+   
     if "send" in server:
         data = httptools.downloadpage(page_url, **kwargs).data
     response = httptools.downloadpage(page_url, **kwargs)
     data = response.data
+    
     data = data.replace('\\u003C', '<').replace('\\u0022', '"').replace('\\u003E', '>').replace('\/', '/') # fapmeifyoucan entrega json
     if response.code == 404 or "<h2>WE ARE SORRY</h2>" in data or '<title>404 Not Found</title>' in data:
         return False, "[%s] El fichero no existe o ha sido borrado" %server

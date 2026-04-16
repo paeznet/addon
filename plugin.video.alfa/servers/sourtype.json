@@ -218,8 +218,8 @@
         "url": "https://sexpester.com/video/\\1/a/"
       },
       {
-        "pattern": "(https://www.fuqer.com/videos/[A-z0-9-]+.html)",
-        "url": "\\1"
+        "pattern": "((?:fuqer|dump).(?:com|xxx))/(?:vid|embed)/([0-9]+)",
+        "url": "https://www.\\1/embed/\\2"
       },
       {
         "pattern": "(https://iceyfile.com/video/embed/[A-z0-9]+/[0-9x]+)",

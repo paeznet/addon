@@ -272,7 +272,7 @@
         "url": "\\1"
       },
       {
-        "pattern": "(https://www.porndupe.art/video/[A-z0-9-]+(?:/|))",
+        "pattern": "(https://www.porndupe.(/?:art|\\w{2,4})/video/[A-z0-9-]+(?:/|))",
         "url": "\\1"
       },
       {
