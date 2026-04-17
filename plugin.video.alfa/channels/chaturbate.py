@@ -9,6 +9,7 @@ from core.item import Item
 from core import servertools
 from core import httptools
 from core import urlparse
+from core.jsontools import json
 from bs4 import BeautifulSoup
 
 #  https://es.chaturbate.com       https://www.queentits.com   https://www.sluts.xyz/
@@ -108,18 +109,14 @@ def lista(item):
 def findvideos(item):
     logger.info()
     itemlist = []
-    data = httptools.downloadpage(item.url).data
-    data = data.replace("\\u0022" , '"').replace("\\u002D", "-")
-    url = scrapertools.find_single_match(data, '"hls_source"\: "([^"]+)"')
-    itemlist.append(Item(channel = item.channel, action="play", url=url))
+    itemlist.append(Item(channel = item.channel, action="play", title="%s", url=item.url, contentTitle=item.contentTitle))
+    itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
     return itemlist
 
 
 def play(item):
     logger.info()
     itemlist = []
-    data = httptools.downloadpage(item.url).data
-    data = data.replace("\\u0022" , '"').replace("\\u002D", "-")
-    url = scrapertools.find_single_match(data, '"hls_source"\: "([^"]+)"')
-    itemlist.append(Item(channel = item.channel, action="play", url=url, contentTitle=item.contentTitle))
+    itemlist.append(Item(channel = item.channel, action="play", title="%s", url=item.url, contentTitle=item.contentTitle))
+    itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
     return itemlist

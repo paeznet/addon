@@ -102,10 +102,10 @@ def get_video_url(page_url, video_password):
             # response = httptools.downloadpage(url, referer=host, **kwargs)
             # if response.code == 403:
                 # url = httptools.downloadpage(url, follow_redirects=False).headers["location"]
-            # headers = httptools.default_headers.copy() 
-            # url += "|%s&Referer=%s/&Origin=%s" % (urlparse.urlencode(headers), host,host)
-            if not "sexpester" in host:
-                url += "|Referer=%s/&Origin=%s" % (host, host)
+            headers = httptools.default_headers.copy() 
+            # if not "sexpester" in host:
+            url += "|%s&Referer=%s/&Origin=%s" % (urlparse.urlencode(headers), host,host)
+                # url += "|Referer=%s/&Origin=%s" % (host, host)
             video_urls.append(["[%s] mp4" %(server), url])
     return video_urls
 
