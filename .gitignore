@@ -1,0 +1,16 @@
+*.pyo
+*.pyc
+__pycache__
+.DS_Store
+.idea
+.vscode
+*_source.py
+test.py
+custom.py
+custom_code.json
+last_fix.json
+
+plugin.video.alfa/channels/okxxx.py
+plugin.video.alfa/servers/torrent.py
+
+**/.syncmetadata
