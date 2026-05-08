@@ -12,7 +12,9 @@ from bs4 import BeautifulSoup
 
 forced_proxy_opt = ''
 timeout = 45
- ####   Fotos error 403 en canal y pornstar
+
+                    ####   Fotos error 403 en canal y pornstar
+
 canonical = {
              'channel': 'spankbang', 
              'host': config.get_setting("current_host", 'spankbang', default=''), 
@@ -92,6 +94,7 @@ def categorias(item):
         if thumbnail.startswith("//"):
             thumbnail = "https:%s" % thumbnail
         # thumbnail += "|Referer=%s" % host
+        
         url =  urlparse.urljoin(item.url,url)
         url += "?o=new"
         plot = ""

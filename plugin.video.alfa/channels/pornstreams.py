@@ -19,9 +19,11 @@ list_quality_movies = AlfaChannelHelper.LIST_QUALITY_MOVIES_A
 list_quality_tvshow = []
 list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_A
+
 forced_proxy_opt = 'ProxySSL'
 
-####  Faltan videos en la web en categorias  
+
+####  Faltan videos en la web en categorias 
 
 canonical = {
              'channel': 'pornstreams', 
@@ -36,7 +38,7 @@ canonical = {
             }
 host = canonical['host'] or canonical['host_alt'][0]
 
-timeout = 5
+timeout = 30
 kwargs = {}
 debug = config.get_setting('debug_report', default=False)
 movie_path = ''
@@ -99,7 +101,7 @@ def section(item):
     logger.info()
     
     findS = finds.copy()
-    # findS['url_replace'] = [['(\/(?:category|channels|actor)\/[^$]+$)', r'\1page/1/?filter=latest']]
+    findS['url_replace'] = [['(\/(?:category|channels|actor)\/[^$]+$)', r'\1page/1/?filter=latest']]
     if item.extra == 'Canal':
         findS['categories'] = dict([('find', [{'tag': ['main'], 'class': 'site-main'}]), 
                                     ('find_all', [{'tag': ['a']}])])
@@ -135,7 +137,7 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
         try:
             elem_json['url'] = elem.get("href", "") or elem.get("src", "")
             if "imagetwist.com" in elem_json['url'] or 'realsrv.com' in elem_json['url'] \
-                or 'send.' in elem_json['url']: continue
+                or 'matcheshonoraryunderwater.' in elem_json['url'] or 'send.' in elem_json['url']: continue
             if not AlfaChannel.obtain_domain(elem_json['url']): continue
             elem_json['language'] = ''
         
@@ -153,7 +155,7 @@ def search(item, texto, **AHkwargs):
     logger.info()
     kwargs.update(AHkwargs)
     
-    item.url = "%s?s=%s&filter=latest" % (host, texto.replace(" ", "+"))
+    item.url = "%spage/1/?s=%s&filter=latest" % (host, texto.replace(" ", "+"))
     
     try:
         if texto:

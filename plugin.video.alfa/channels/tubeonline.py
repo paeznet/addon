@@ -11,7 +11,8 @@ if not PY3: _dict = dict; from lib.AlfaChannelHelper import dict
 from lib.AlfaChannelHelper import DictionaryAllChannel
 from lib.AlfaChannelHelper import re, traceback
 from lib.AlfaChannelHelper import Item, servertools, scrapertools, get_thumb, config, logger, filtertools, autoplay
-# from lib.alfa_assistant import is_alfa_installed
+from lib.alfa_assistant import is_alfa_installed
+
 
 IDIOMAS = {'eng': 'VOSE', "mx": "LAT", "es": "CAST",
            'container33': 'VOSE', "container11": "LAT", "container22": "CAST"}
@@ -326,8 +327,9 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
     except Exception:
         pass
     
-    servers = {'strmup': 'bestb', 'hqq': '', 'asnwish': 'streamwish', 'bysejikuar': 'filemoon', 'vidnest': 'highstream'}
-    
+    servers = {'strmup': 'bestb', 'hqq': '', 'asnwish': 'streamwish',
+               'bysejikuar': 'filemoon', 'vidnest': 'highstream', 'luluvdo': 'lulustream'}
+    logger.debug(matches_int)
     for lang_container in matches_int:
         language = IDIOMAS.get(lang_container["id"], "VOSE")
         for elem in lang_container.find_all("li"):

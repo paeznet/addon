@@ -19,24 +19,28 @@ list_quality_movies = AlfaChannelHelper.LIST_QUALITY_MOVIES_A
 list_quality_tvshow = []
 list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_A
-forced_proxy_opt = 'ProxySSL'
+
+forced_proxy_opt = ''  # ProxySSL
 
 
 ######      RES 50% fotos   https://pornox.hu/contents/videos_screenshots/101000/101150/336x189/7.jpg incluso con verifypeer
                          # https://pornox.hu/contents/videos_screenshots/101000/101150/320x180/7.jpg
                     # elem_json['thumbnail'] = re.sub(r"\d+x\d+/\d+.jpg", "preview.jpg",thumbnail)
-                         
+
 canonical = {
              'channel': 'pornox', 
              'host': config.get_setting("current_host", 'pornox', default=''), 
              'host_alt': ["https://pornox.hu/"], 
              'host_black_list': [], 
+             # 'set_tls': None, 'set_tls_min': False, 'retries_cloudflare': 5, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
+             # 'cf_assistant': False, 'CF_stat': True, 
+             # 'CF': False, 'CF_test': False, 'alfa_s': True
              'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 1, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 'cf_assistant': False, 
              'CF': False, 'CF_test': False, 'alfa_s': True
             }
 host = canonical['host'] or canonical['host_alt'][0]
 
-timeout = 10
+timeout = 30
 kwargs = {}
 debug = config.get_setting('debug_report', default=False)
 movie_path = ''
@@ -72,10 +76,13 @@ AlfaChannel = DictionaryAdultChannel(host, movie_path=movie_path, tv_path=tv_pat
                                      channel=canonical['channel'], actualizar_titulos=True, url_replace=url_replace, debug=debug)
 
 
+url = ""
+
 def mainlist(item):
     logger.info()
     itemlist = []
-    itemlist.append(Item(channel=item.channel, title="Nuevas" , action="list_all", url=host + "en/kereses/?sort_by=post_date&from_videos=1"))
+    
+    itemlist.append(Item(channel=item.channel, title="Nuevas" , action="list_all", url=host +"en/kereses/?sort_by=post_date&from_videos=1"))
     itemlist.append(Item(channel=item.channel, title="Mas Vistas" , action="list_all", url=host + "en/kereses/?sort_by=video_viewed_month&from_videos=1"))
     itemlist.append(Item(channel=item.channel, title="Mejor Valorada" , action="list_all", url=host + "en/kereses/?sort_by=rating_month&from_videos=1"))
     itemlist.append(Item(channel=item.channel, title="Mas Favoritas" , action="list_all", url=host + "en/kereses/?sort_by=most_favourited&from_videos=1"))
@@ -176,6 +183,9 @@ def play(item):
     
     if soup.find('div', id='kt_player'):
         url = item.url
+    elif soup.video:
+        url = soup.video.source['src']
+        url += "|Referer=%s" %host
     else:
         url = soup.iframe['src']
         url = url.replace("embed", "videos").replace('lol', 'tv')

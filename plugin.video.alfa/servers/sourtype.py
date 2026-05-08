@@ -8,6 +8,7 @@ from core import urlparse
 from platformcode import logger
 from bs4 import BeautifulSoup
 
+
 kwargs = {'set_tls': None, 'set_tls_min': False, 'retries_cloudflare': 6, 'ignore_response_code': True, 
           'timeout': 45, 'cf_assistant': False, 'CF_stat': True, 'CF': True}
 
@@ -18,11 +19,12 @@ def test_video_exists(page_url):
     domain = scrapertools.get_domain_from_url(page_url)
     host = "https://%s" % domain
     server = domain.split(".")[-2]
-    # server = scrapertools.get_domain_from_url(page_url).split(".")[-2]
+   
     if "send" in server:
         data = httptools.downloadpage(page_url, **kwargs).data
     response = httptools.downloadpage(page_url, **kwargs)
     data = response.data
+    
     data = data.replace('\\u003C', '<').replace('\\u0022', '"').replace('\\u003E', '>').replace('\/', '/') # fapmeifyoucan entrega json
     if response.code == 404 or "<h2>WE ARE SORRY</h2>" in data or '<title>404 Not Found</title>' in data:
         return False, "[%s] El fichero no existe o ha sido borrado" %server
@@ -101,10 +103,10 @@ def get_video_url(page_url, video_password):
             # response = httptools.downloadpage(url, referer=host, **kwargs)
             # if response.code == 403:
                 # url = httptools.downloadpage(url, follow_redirects=False).headers["location"]
-            # headers = httptools.default_headers.copy() 
-            # url += "|%s&Referer=%s/&Origin=%s" % (urlparse.urlencode(headers), host,host)
-            if not "sexpester" in host:
-                url += "|Referer=%s/&Origin=%s" % (host, host)
+            headers = httptools.default_headers.copy() 
+            # if not "sexpester" in host:
+            url += "|%s&Referer=%s/&Origin=%s" % (urlparse.urlencode(headers), host,host)
+                # url += "|Referer=%s/&Origin=%s" % (host, host)
             video_urls.append(["[%s] mp4" %(server), url])
     return video_urls
 

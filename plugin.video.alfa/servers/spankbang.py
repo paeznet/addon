@@ -24,11 +24,11 @@ def get_video_url(page_url, video_password):
     logger.info("(page_url='%s')" % page_url)
     video_urls = []
     
+    global data
     if "embed" in page_url:
         page_url = scrapertools.find_single_match(data,'<link rel="canonical" href="([^"]+)"')
     data = httptools.downloadpage(page_url, **kwargs).data
     data = scrapertools.find_single_match(data,'stream_data\s+=\s+([^\}]+)')
-    
     
     # url = scrapertools.find_single_match(data,'<source src="(.*?)"')
     # video_urls.append(['[.mp4]', url])

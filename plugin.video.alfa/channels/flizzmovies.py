@@ -8,10 +8,11 @@ PY3 = False
 if sys.version_info[0] >= 3: PY3 = True; unicode = str; unichr = chr; long = int; _dict = dict
 
 from lib import AlfaChannelHelper
-if not PY3: _dict = dict; from lib.AlfaChannelHelper import dict
-from lib.AlfaChannelHelper import DictionaryAllChannel
-from lib.AlfaChannelHelper import traceback, base64, re
-from lib.AlfaChannelHelper import Item, get_thumb, config, logger, autoplay, servertools
+if not PY3: _dict = dict; from AlfaChannelHelper import dict
+from AlfaChannelHelper import DictionaryAllChannel
+from AlfaChannelHelper import re, traceback, time, base64, xbmcgui
+from AlfaChannelHelper import Item, servertools, scrapertools, jsontools, get_thumb, config, logger, filtertools, autoplay, renumbertools
+
 
 SERVERS = {'vidhide': 'vidhidepro', 'turboviplay': 'emturbovid', 
            'abyss': '', 'krakenfiles': '', 'flizzmovies' : '', 'dood': 'doodstream'}
@@ -23,6 +24,7 @@ list_quality = list_quality_movies + list_quality_tvshow
 list_servers = ['vidguard', 'vidhidepro', 'streamwish', 'emturbovid']
 forced_proxy_opt = ''
 
+
 canonical = {
              'channel': 'flizzmovies', 
              'host': config.get_setting("current_host", 'flizzmovies', default=''), 
@@ -32,6 +34,7 @@ canonical = {
              'CF': False, 'CF_test': False, 'alfa_s': True
              }
 host = canonical['host'] or canonical['host_alt'][0]
+
 
 timeout = 15
 kwargs = {}
@@ -176,6 +179,9 @@ def list_all_matches(item, matches_int, **AHkwargs):
             else:
                 elem_json['thumbnail'] = elem.find('img', class_="load").get("data-src", "")
             elem_json['year'] = '-'
+            if elem.find('div' , class_='card_info'): 
+                info = elem.find('div' , class_='card_info').text.strip()
+                elem_json['year'] = scrapertools.find_single_match(info, '(\d{4})')
             elem_json['context'] = autoplay.context
 
         except Exception:

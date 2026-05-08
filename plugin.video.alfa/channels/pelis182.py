@@ -15,16 +15,15 @@ from platformcode import config, logger
 from modules import autoplay
 
 list_language = ["LAT"]
-
 list_quality = []
-
 list_servers = ['lauchacohete']
+
 
 canonical = {
              'channel': 'pelis182', 
              'host': config.get_setting("current_host", 'pelis182', default=''), 
-             'host_alt': ["https://www.pelis182.com/"], 
-             'host_black_list': [], 
+             'host_alt': ["https://pelis182.com/"], 
+             'host_black_list': ["https://www.pelis182.com/"], 
              'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 1, 'cf_assistant': False, 
              'CF': False, 'CF_test': False, 'alfa_s': True
             }
@@ -94,9 +93,9 @@ def categories(item):
 
 def list_all(item):
     logger.info()
-
+    
     itemlist = list()
-
+    
     try:
         soup = create_soup(item.url)
         matches = soup.find_all("article")
@@ -107,6 +106,11 @@ def list_all(item):
     for elem in matches:
         url = elem.a["href"]
         title = elem.a["title"].strip()
+        match = re.search(r'\((\d{4})\)\s*$', title)
+        if match:
+            year = match.group(1)
+        else:
+            year = "-"
         title = re.sub(r'\s+\(.*?\)\s*$', '', title)
         season_pattern = r'(?i)\s+–\s+Temporada\s+(\d+)'
         season = scrapertools.find_single_match(title, season_pattern)
@@ -116,10 +120,11 @@ def list_all(item):
         new_item = Item(channel=item.channel,
                         thumbnail=thumbnail,
                         title=title,
-                        url=url)
+                        url=url,
+                        infoLabels={"year": year})
         
         if c_type == "movie":
-            new_item.infoLabels={"year": '-'}
+            # new_item.infoLabels={"year": year}
             new_item.contentTitle = title
             new_item.action = "findvideos"
             new_item.contentType = "movie"
@@ -213,7 +218,6 @@ def episodios(item):
 
 def findvideos(item):
     logger.info()
-
     itemlist = list()
     
     if item.contentType == "movie":
