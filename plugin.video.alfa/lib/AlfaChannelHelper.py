@@ -253,6 +253,13 @@ class AlfaChannelHelper:
         #logger.debug('KWARGS: %s' % kwargs)
         response = self.httptools.downloadpage(url, **kwargs)
 
+        if kwargs["canonical"].get("cf_assistant") and kwargs["canonical"].get("cf_challenges_list"):
+            for challenge in kwargs["canonical"]["cf_challenges_list"]:
+                if challenge in str(response.data):
+                    req = self.assistant_challenge(url, **kwargs)
+                    response = self.httptools.downloadpage(url, **kwargs)
+                    break
+
         self.TEST_ON_AIR = self.httptools.TEST_ON_AIR
         self.CACHING_DOMAINS = self.httptools.CACHING_DOMAINS
         DEBUG = self.DEBUG = self.DEBUG if not self.TEST_ON_AIR else False
@@ -327,6 +334,16 @@ class AlfaChannelHelper:
         self.ssl_context = self.httptools.ssl_context
 
         return soup
+        
+    def assistant_challenge(self, url, **kwargs):
+        import requests
+        from lib.cloudscraper import cf_assistant
+
+        req = requests.Response()
+        req.status_code = 403
+        req = cf_assistant.get_cl(kwargs, req, cache=True, httptools_obj=self.httptools)
+
+        return req
 
     def list_all(self, item, data='', matches_post=None, postprocess=None, generictools=False, 
                  finds={}, **kwargs):
