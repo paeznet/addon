@@ -341,7 +341,11 @@ class AlfaChannelHelper:
 
         req = requests.Response()
         req.status_code = 403
-        req = cf_assistant.get_cl(kwargs, req, cache=True, httptools_obj=self.httptools)
+        kwargs_cha = copy.deepcopy(kwargs)
+        kwargs_cha.update(kwargs.get("canonical", {}))
+        kwargs_cha["url"] = url
+
+        req = cf_assistant.get_cl(kwargs_cha, req, cache=True, httptools_obj=self.httptools)
 
         return req
 
