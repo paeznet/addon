@@ -253,10 +253,10 @@ class AlfaChannelHelper:
         #logger.debug('KWARGS: %s' % kwargs)
         response = self.httptools.downloadpage(url, **kwargs)
 
-        if kwargs["canonical"].get("cf_assistant") and kwargs["canonical"].get("cf_challenges_list"):
+        if kwargs["canonical"].get("cf_challenges_list"):
             for challenge in kwargs["canonical"]["cf_challenges_list"]:
                 if challenge in str(response.data):
-                    req = self.assistant_challenge(url, **kwargs)
+                    req = self.anubis_challenge(url, response, challenge, **kwargs)
                     response = self.httptools.downloadpage(url, **kwargs)
                     break
 
@@ -335,11 +335,38 @@ class AlfaChannelHelper:
 
         return soup
         
-    def assistant_challenge(self, url, **kwargs):
+    def anubis_challenge(self, url, response, challenge, **kwargs):
         import requests
+        
+        req = requests.Response()
+        req.status_code = 200
+
+        try:
+            from lib.unshortenit import bypass_anubis
+            
+            kwargs_cha = {
+                'set_tls': kwargs.get('canonical', {}).get('set_tls', False),
+                'set_tls_min': kwargs.get('canonical', {}).get('set_tls', False),
+                'CF_stat': kwargs.get('canonical', {}).get('CF_stat', False),
+                'CF': kwargs.get('canonical', {}).get('CF', False),
+                'CF_test': kwargs.get('canonical', {}).get('CF_test', False),
+                'cf_assistant_ua': kwargs.get('canonical', {}).get('cf_assistant_ua', False),
+                'challenge_api': kwargs.get('canonical', {}).get('challenge_api', None),
+                'challenge_post': kwargs.get('canonical', {}).get('challenge_post', False),
+                'challenge': challenge, 
+                'forced_proxy_ifnot_assistant': None,
+                'retries_cloudflare': -1, 
+                'ignore_response_code': True, 
+                'cf_assistant': False,
+            }
+            req = bypass_anubis(url, response, **kwargs_cha)
+            if req.status_code in self.SUCCESS_CODES or req.status_code in self.REDIRECTION_CODES:
+                return req
+        except Exception:
+            pass
+
         from lib.cloudscraper import cf_assistant
 
-        req = requests.Response()
         req.status_code = 403
         kwargs_cha = copy.deepcopy(kwargs)
         kwargs_cha.update(kwargs.get("canonical", {}))
