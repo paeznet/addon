@@ -183,8 +183,8 @@
         "url": "\\1"
       },
       {
-        "pattern": "(https://slutload.com/porn/video/[A-z0-9_]+)",
-        "url": "\\1"
+        "pattern": "https://slutload.com/(?:\\w{2}/|)(porn/video/[A-z0-9_]+)",
+        "url": "https://www.camsoda.com/es/\\1"
       },
       {
         "pattern": "(https://www.(?:playvids|pornoeggs).com/(?:es/|)[A-z0-9]+/[A-z0-9-]+(?:/|))",
