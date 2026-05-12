@@ -20,13 +20,13 @@ list_language = list(IDIOMAS.values())
 list_quality = []
 list_servers = list(SERVER.values())
 
-# https://pelisflix1.loan/    https://pelisflix200.life/  https://pelisplushd20.lat/
+# https://pelisflixhd.win/  https://pelisflix1.autos/    https://pelisflix200.life/  https://pelisplushd20.lat/
 
 canonical = {
              'channel': 'pelisflix', 
              'host': config.get_setting("current_host", 'pelisflix', default=''), 
-             'host_alt': ['https://pelisflix1.loan/'], 
-             'host_black_list': ['https://pelisflixhd.fit/',
+             'host_alt': ['https://pelisflix1.autos/'], 
+             'host_black_list': ['https://pelisflix1.net/', 'https://pelisflix1.loan/', 'https://pelisflixhd.fit/',
                                  'https://pelisflixhd.click/', 'https://pelisflixhd.buzz/', 'https://pelisflixhd.biz/',
                                  'https://pelisflixhd.cam/', 'https://pelisflixhd.fun/', 'https://pelisflixhd.net/', 
                                  'https://pelisflixhd.vip/', 'https://pelisflixhd.com/', 'https://pelisflixhd.pro/', 
@@ -41,7 +41,6 @@ canonical = {
              'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 3, 
              'CF': False, 'CF_test': False, 'alfa_s': True
             }
-
 host = canonical['host'] or canonical['host_alt'][0]
 host_save = host
 __channel__ = canonical['channel']
@@ -143,7 +142,7 @@ def categorias(item):
         if "/estrenos/" not in url: 
             itemlist.append(item.clone(action="lista", url=url, title=title))
     if "Genero" not in item.title:
-        itemlist.append(item.clone(action="lista", url="%sgenero/dc-comics/" % host, title="DC"))
+        itemlist.append(item.clone(action="lista", url="%sgenero/dc/" % host, title="DC"))
         itemlist.append(item.clone(action="lista", url="%sgenero/marvel/" % host, title="MARVEL"))
     
     return itemlist
@@ -234,7 +233,7 @@ def lista(item):
         if year == '':
             year = '-'
         
-        new_item = item.clone(url=url, title=title, thumbnail=thumbnail, infoLabels={"year": year})
+        new_item = item.clone(url=url, title=title, thumbnail=thumbnail, language="", infoLabels={"year": year})
         
         if "serie" in url:
             new_item.action = "seasons"
@@ -244,8 +243,6 @@ def lista(item):
             new_item.action = "findvideos"
             new_item.contentTitle = title
             new_item.contentType = 'movie'
-            # if language:
-                # new_item.language = language
         
         itemlist.append(new_item)
 
