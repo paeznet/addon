@@ -97,7 +97,7 @@ canonical = {
              'cf_no_blacklist': True, 'cf_removeAllCookies': False if cf_assistant == 'force' else True,
              'cf_challenge': 1, 'cf_returnkey': 'url', 'cf_partial': True, 'cf_debug': debug, 
              'cf_cookie': '$HOST|browser-pow-auth' if cf_assistant is True else None, 'cf_jscode': None, 
-             'cf_challenges_list': ['anubis_challenge'], 'challenge_post': False, 'challenge_api': None, 
+             'cf_challenges_list': ['anubis_challenge'], 'challenge_post': False, 'challenge_api': None, 'cookies_clear': True, 
              'cf_cookies_names': {'browser-pow-auth': False if cf_assistant is True else True},
              'CF_if_assistant': True if cf_assistant is True else False, 'retries_cloudflare': -1, 
              'CF_stat': True if cf_assistant is True else False, 

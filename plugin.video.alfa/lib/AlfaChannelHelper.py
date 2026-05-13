@@ -334,39 +334,29 @@ class AlfaChannelHelper:
         self.ssl_context = self.httptools.ssl_context
 
         return soup
-        
+
     def anubis_challenge(self, url, response, challenge, **kwargs):
-        import requests
-        
-        req = requests.Response()
-        req.status_code = 200
 
         try:
             from lib.unshortenit import bypass_anubis
-            
+
             kwargs_cha = {
-                'set_tls': kwargs.get('canonical', {}).get('set_tls', False),
-                'set_tls_min': kwargs.get('canonical', {}).get('set_tls', False),
-                'CF_stat': kwargs.get('canonical', {}).get('CF_stat', False),
-                'CF': kwargs.get('canonical', {}).get('CF', False),
-                'CF_test': kwargs.get('canonical', {}).get('CF_test', False),
                 'cf_assistant_ua': kwargs.get('canonical', {}).get('cf_assistant_ua', False),
                 'challenge_api': kwargs.get('canonical', {}).get('challenge_api', None),
                 'challenge_post': kwargs.get('canonical', {}).get('challenge_post', False),
+                'cookies_clear': kwargs.get('canonical', {}).get('cookies_clear', True),
                 'challenge': challenge, 
-                'forced_proxy_ifnot_assistant': None,
-                'retries_cloudflare': -1, 
-                'ignore_response_code': True, 
-                'cf_assistant': False,
             }
             req = bypass_anubis(url, response, **kwargs_cha)
-            if req.status_code in self.SUCCESS_CODES or req.status_code in self.REDIRECTION_CODES:
+            if req and req.status_code in self.SUCCESS_CODES + self.REDIRECTION_CODES:
                 return req
         except Exception:
             pass
 
+        import requests
         from lib.cloudscraper import cf_assistant
 
+        req = requests.Response()
         req.status_code = 403
         kwargs_cha = copy.deepcopy(kwargs)
         kwargs_cha.update(kwargs.get("canonical", {}))
