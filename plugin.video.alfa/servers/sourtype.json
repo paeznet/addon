@@ -183,7 +183,7 @@
         "url": "\\1"
       },
       {
-        "pattern": "https://slutload.com/(?:\\w{2}/|)(porn/video/[A-z0-9_]+)",
+        "pattern": "(?:slutload|camsoda).com/(?:\\w{2}/|)(porn/video/[A-z0-9_]+)",
         "url": "https://www.camsoda.com/es/\\1"
       },
       {
