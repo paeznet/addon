@@ -341,6 +341,7 @@ class AlfaChannelHelper:
             from lib.unshortenit import bypass_anubis
 
             kwargs_cha = {
+                'cf_debug': kwargs.get('canonical', {}).get('cf_debug', False),
                 'cf_assistant_ua': kwargs.get('canonical', {}).get('cf_assistant_ua', False),
                 'challenge_api': kwargs.get('canonical', {}).get('challenge_api', None),
                 'challenge_post': kwargs.get('canonical', {}).get('challenge_post', False),
@@ -351,6 +352,7 @@ class AlfaChannelHelper:
             if req and req.status_code in self.SUCCESS_CODES + self.REDIRECTION_CODES:
                 return req
         except Exception:
+            #logger.error(traceback.format_exc())
             pass
 
         import requests

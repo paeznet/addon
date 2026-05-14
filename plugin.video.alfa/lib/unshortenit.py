@@ -503,7 +503,7 @@ def sortened_urls(url, url_base64, host, retry=False, referer=None, alfa_s=True,
     return unlock_urls(url, url_base64, host, retry=retry, referer=referer, alfa_s=alfa_s, item=item)
 
 
-def bypass_anubis(url, response, **kwargs):
+def bypass_anubis(url, response, debug=False, **kwargs):
     import hashlib
     import random
     import requests
@@ -571,6 +571,9 @@ def bypass_anubis(url, response, **kwargs):
 
             nonce += 1
 
+
+    debug = debug or kwargs.get("cf_debug", False)
+
     cookies_list = []
     domain = httptools.obtain_domain(url).lstrip(".")
     jar = requests.cookies.RequestsCookieJar()
@@ -579,6 +582,7 @@ def bypass_anubis(url, response, **kwargs):
                 domain="."+domain,
                 path=cookie.get("path", "/"),
                 expires=cookie.get("expires", 0))
+    if debug: logger.debug("[*] Cookies iniciales: %s" % cookies_list)
 
     UA = httptools.ua
     if kwargs.get("cf_assistant_ua", False):
@@ -594,6 +598,7 @@ def bypass_anubis(url, response, **kwargs):
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
     })
+    if debug: logger.debug("[*] Headers iniciales: %s" % session.headers)
 
     challenge_txt = kwargs.get("challenge", "anubis_challenge")
 
@@ -640,10 +645,10 @@ def bypass_anubis(url, response, **kwargs):
         challenge_data.get("rules", {}).get("difficulty", 4)
     )
 
+    if debug: logger.debug("[*] Id: %s, Challenge: %s, Difficulty: %s, challenge_dict: %s" \
+                            % (id_challenge, challenge, difficulty, challenge_data))
     if not challenge:
         raise Exception("Challenge inválido")
-
-    #logger.debug("[*] Id: %s, Challenge: %s, Difficulty: %s" % (id_challenge, challenge, difficulty))
 
     # Resolver PoW
     nonce, elapsed, response_hash = solve_pow(
@@ -652,7 +657,7 @@ def bypass_anubis(url, response, **kwargs):
         difficulty
     )
 
-    #logger.debug("[+] Solución encontrada: nonce: %s, tiempo: %s, hash: %s" % (nonce, elapsed, response_hash))
+    if debug: logger.debug("[+] Solución encontrada: nonce: %s, tiempo: %s, hash: %s" % (nonce, elapsed, response_hash))
 
     # URL API
     base = re.match(r"^https?://[^/]+", url).group(0)
@@ -667,6 +672,7 @@ def bypass_anubis(url, response, **kwargs):
         "Sec-Fetch-Mode": "cors",
         "Sec-Fetch-Dest": "empty",
     }
+    if debug: logger.debug("[*] Headers finales: %s" % verify_headers)
 
     payload = {
         "id": id_challenge,
@@ -695,7 +701,7 @@ def bypass_anubis(url, response, **kwargs):
         )
 
     if r2.status_code not in httptools.SUCCESS_CODES + httptools.REDIRECTION_CODES:
-        logger.debug("Status_code: %s, URL: %s / %s, Headers: %s, Cookies: %s, Datos: %s" \
+        logger.debug("[*] Status_code: %s, URL: %s / %s, Headers: %s, Cookies: %s, Datos: %s" \
                      % (r2.status_code, verify_url, payload, r2.headers, jar, r2.text))
         return False
 
@@ -710,6 +716,8 @@ def bypass_anubis(url, response, **kwargs):
         cookie_pow_auth_dict["domain"] = domain
         cookie_pow_auth_dict["expires"] = 3600 * 12
         cookies_list.append(cookie_pow_auth_dict)
+        if debug: logger.debug("[*] Status_code: %s, URL: %s / %s, Headers: %s, Cookies: %s, Datos: %s" \
+                                % (r2.status_code, verify_url, payload, r2.headers, cookies_list, r2.text))
 
         clear = kwargs.get("cookies_clear", True)
         for cookie in cookies_list:
