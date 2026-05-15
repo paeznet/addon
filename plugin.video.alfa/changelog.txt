@@ -1,15 +1,5 @@
 
         [B]Estos son los cambios para esta versión:[/B]
         
-        • +18
-        • Dontorrent
-        • EstrenosCinesaa
-        • Flizz Movies
-        • GranTorrent
-        • HomeCine
-        • Pelis182
-        • Pelisflix
-        • SoloLatino
-        • TubeOnLine
-        • Tubepelis
+        • Correcciones y mejoras
         

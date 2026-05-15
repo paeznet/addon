@@ -5,10 +5,19 @@ name: Bump add-on version & release
 on:
   workflow_dispatch:
     inputs:
-      version_type:
-        description: 'Tipo de versión a publicar'
+      action:
+        description: 'Acción a ejecutar'
         required: true
         type: choice
+        default: release
+        options:
+          - release
+          - update-repo
+      version_type:
+        description: 'Tipo de versión a publicar'
+        required: false
+        type: choice
+        default: major
         options:
           - feature
           - major
@@ -30,11 +39,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        if: ${{ github.event.inputs.action != 'update-repo' }}
         with:
           fetch-depth: 0
           fetch-tags: true
       - uses: actions/setup-python@v5
+        if: ${{ github.event.inputs.action != 'update-repo' }}
       - name: Install environment tools
+        if: ${{ github.event.inputs.action != 'update-repo' }}
         working-directory: ${{ github.workspace }}
         run: |
           sudo apt-get update
@@ -42,6 +54,7 @@ jobs:
           pip install -r requirements-ci.txt
 
       - name: Bump version and release on GitHub
+        if: ${{ github.event.inputs.action != 'update-repo' }}
         id: release
         working-directory: ${{ github.workspace }}
         env:
@@ -57,6 +70,24 @@ jobs:
           url=$(gh api repos/$GITHUB_REPOSITORY/releases/latest --jq '.assets[0].browser_download_url')
           echo "url=$url" >> $GITHUB_OUTPUT
 
+      - name: Get latest release URL
+        if: ${{ github.event.inputs.action == 'update-repo' }}
+        id: latest_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url=$(gh api repos/$GITHUB_REPOSITORY/releases/latest --jq '.assets[0].browser_download_url')
+          echo "url=$url" >> $GITHUB_OUTPUT
+
+      - name: Resolve repository update URL
+        id: update_url
+        run: |
+          url="${{ steps.release.outputs.url }}"
+          if [ -z "$url" ]; then
+            url="${{ steps.latest_release.outputs.url }}"
+          fi
+          echo "url=$url" >> $GITHUB_OUTPUT
+
       - uses: peter-evans/repository-dispatch@v3
         with:
           token: ${{ secrets.REPO_TOKEN }}
@@ -65,5 +96,5 @@ jobs:
           client-payload: >-
             {
               "addon_id": "${{ env.ADDON }}",
-              "url": "${{ steps.release.outputs.url }}"
+              "url": "${{ steps.update_url.outputs.url }}"
             }
