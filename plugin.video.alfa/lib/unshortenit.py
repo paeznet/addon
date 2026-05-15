@@ -501,3 +501,226 @@ def sortened_urls(url, url_base64, host, retry=False, referer=None, alfa_s=True,
         from lib.alfaresolver_py3 import unlock_urls
 
     return unlock_urls(url, url_base64, host, retry=retry, referer=referer, alfa_s=alfa_s, item=item)
+
+
+def bypass_anubis(url, response, debug=False, **kwargs):
+    import hashlib
+    import random
+    import requests
+
+    # ──────────────────────────────────────────────
+    # EXTRAER CHALLENGE DEL HTML
+    # ──────────────────────────────────────────────
+
+    def extract_json(html, challenge_txt):
+        """
+        Busca JSON de Anubis dentro del HTML.
+        """
+
+        patterns = [
+            r'(?i)<script\s*id="%s"\s*type="application/json">(.*?)</script>' % challenge_txt,
+            r'window\.__ANUBIS_CHALLENGE__\s*=\s*({.*?})\s*;',
+            r'anubisChallenge\s*=\s*({.*?})\s*;',
+            r'id="anubis-state".*?>(.*?)<',
+        ]
+
+        for pattern in patterns:
+            m = re.search(pattern, html, re.S)
+
+            if not m:
+                continue
+
+            raw = m.group(1).strip()
+
+            if raw == "null":
+                return None
+
+            try:
+                return json.loads(raw)
+            except:
+                pass
+
+        return None
+
+    # ──────────────────────────────────────────────
+    # RESOLVER POW
+    # ──────────────────────────────────────────────
+
+    def solve_pow(id_challenge, random_data, difficulty):
+
+        prefix = "0" * difficulty
+        nonce = 0
+        start = time.time()
+
+        while True:
+
+            # Variante más compatible con Anubis real
+            candidate = "%s%d" % (random_data, nonce)
+
+            h = hashlib.sha256(candidate.encode("utf-8")).hexdigest()
+
+            if h.startswith(prefix):
+                elapsed = int((time.time() - start) * 1000)
+                # Simular tiempo humano mínimo
+                if elapsed < 350:
+                    fake_delay = random.randint(400, 900)
+                    time.sleep((fake_delay - elapsed) / 1000.0)
+                    elapsed = fake_delay
+
+                return nonce, elapsed, h
+
+            nonce += 1
+
+
+    debug = debug or kwargs.get("cf_debug", False)
+
+    cookies_list = []
+    domain = httptools.obtain_domain(url).lstrip(".")
+    jar = requests.cookies.RequestsCookieJar()
+    for cookie in cookies_list:
+        jar.set(cookie["name"], cookie["value"],
+                domain="."+domain,
+                path=cookie.get("path", "/"),
+                expires=cookie.get("expires", 0))
+    if debug: logger.debug("[*] Cookies iniciales: %s" % cookies_list)
+
+    UA = httptools.ua
+    if kwargs.get("cf_assistant_ua", False):
+        UA = config.get_setting("cf_assistant_ua", None)
+        if not UA:
+            UA = httptools.ua
+
+    session = requests.Session()
+    session.headers.update({
+        "User-Agent": UA,
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+        "Accept-Encoding": "gzip, deflate",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+    })
+    if debug: logger.debug("[*] Headers iniciales: %s" % session.headers)
+
+    challenge_txt = kwargs.get("challenge", "anubis_challenge")
+
+    r = session.get(
+        url,
+        allow_redirects=True,
+        cookies=jar,
+    )
+    html = r.text if challenge_txt.lower() in r.text.lower() else response.data
+    code = r.status_code
+
+    # ¿Ya pasó?
+    if code not in httptools.SUCCESS_CODES + httptools.REDIRECTION_CODES or challenge_txt.lower() not in html.lower():
+        logger.error("[+] Status_code: %s, Sin challenge: %s / %s" % (code, challenge_txt, html))
+        return False
+
+    challenge_data = extract_json(html, challenge_txt)
+
+    if not challenge_data:
+        logger.error("[*] No se pudo extraer challenge: %s / %s" % (challenge_txt, html))
+        return False
+
+    id_challenge = (
+        challenge_data.get("challenge", {}).get("id")
+        or challenge_data.get("id")
+    )
+
+    jar.set("browser-pow-cookie-verification", id_challenge, domain="."+domain)
+    cookies_list.append({
+        "name": "browser-pow-cookie-verification",
+        "value": id_challenge, 
+        "domain": "."+domain,
+        "expires": 3600 * 12,
+    })
+
+    challenge = (
+        challenge_data.get("challenge", {}).get("randomData")
+        or challenge_data.get("challenge")
+        or challenge_data.get("data")
+        or challenge_data.get("token")
+    )
+
+    difficulty = int(
+        challenge_data.get("rules", {}).get("difficulty", 4)
+    )
+
+    if debug: logger.debug("[*] Id: %s, Challenge: %s, Difficulty: %s, challenge_dict: %s" \
+                            % (id_challenge, challenge, difficulty, challenge_data))
+    if not challenge:
+        raise Exception("Challenge inválido")
+
+    # Resolver PoW
+    nonce, elapsed, response_hash = solve_pow(
+        id_challenge,
+        challenge,
+        difficulty
+    )
+
+    if debug: logger.debug("[+] Solución encontrada: nonce: %s, tiempo: %s, hash: %s" % (nonce, elapsed, response_hash))
+
+    # URL API
+    base = re.match(r"^https?://[^/]+", url).group(0)
+    api = kwargs.get("challenge_api") or "/.within.website/x/cmd/anubis/api/pass-challenge"
+    verify_url = base + api
+
+    verify_headers  = {
+        "Referer": url,
+        "Origin": base,
+        "Accept": "*/*",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Dest": "empty",
+    }
+    if debug: logger.debug("[*] Headers finales: %s" % verify_headers)
+
+    payload = {
+        "id": id_challenge,
+        "response": response_hash,
+        "nonce": nonce,
+        "redir": url,
+        "elapsedTime": elapsed,
+    }
+
+    if not kwargs.get("challenge_post", False):
+
+        r2 = session.get(
+            verify_url,
+            params=payload,
+            headers=verify_headers,
+            allow_redirects=False,
+        )
+    
+    else:
+        r2 = session.post(
+            verify_url,
+            data=payload,
+            headers=verify_headers,
+            allow_redirects=False,
+            cookies=jar,
+        )
+
+    if r2.status_code not in httptools.SUCCESS_CODES + httptools.REDIRECTION_CODES:
+        logger.debug("[*] Status_code: %s, URL: %s / %s, Headers: %s, Cookies: %s, Datos: %s" \
+                     % (r2.status_code, verify_url, payload, r2.headers, jar, r2.text))
+        return False
+
+    else:
+        cookie_pow_auth_raw = r2.headers.get("Set-Cookie", "").split(";")
+        cookie_pow_auth_dict = {}
+        for cookie in cookie_pow_auth_raw:
+            cookie_kv = cookie.split("=")
+            if cookie_kv[0] == "browser-pow-auth":
+                cookie_pow_auth_dict["name"] = cookie_kv[0]
+                cookie_pow_auth_dict["value"] = cookie_kv[1]
+        cookie_pow_auth_dict["domain"] = domain
+        cookie_pow_auth_dict["expires"] = 3600 * 12
+        cookies_list.append(cookie_pow_auth_dict)
+        if debug: logger.debug("[*] Status_code: %s, URL: %s / %s, Headers: %s, Cookies: %s, Datos: %s" \
+                                % (r2.status_code, verify_url, payload, r2.headers, cookies_list, r2.text))
+
+        clear = kwargs.get("cookies_clear", True)
+        for cookie in cookies_list:
+            httptools.set_cookies(cookie, clear=clear, alfa_s=True)
+
+    return r2

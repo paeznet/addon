@@ -253,6 +253,13 @@ class AlfaChannelHelper:
         #logger.debug('KWARGS: %s' % kwargs)
         response = self.httptools.downloadpage(url, **kwargs)
 
+        if kwargs["canonical"].get("cf_challenges_list"):
+            for challenge in kwargs["canonical"]["cf_challenges_list"]:
+                if challenge in str(response.data):
+                    req = self.anubis_challenge(url, response, challenge, **kwargs)
+                    response = self.httptools.downloadpage(url, **kwargs)
+                    break
+
         self.TEST_ON_AIR = self.httptools.TEST_ON_AIR
         self.CACHING_DOMAINS = self.httptools.CACHING_DOMAINS
         DEBUG = self.DEBUG = self.DEBUG if not self.TEST_ON_AIR else False
@@ -327,6 +334,39 @@ class AlfaChannelHelper:
         self.ssl_context = self.httptools.ssl_context
 
         return soup
+
+    def anubis_challenge(self, url, response, challenge, **kwargs):
+
+        try:
+            from lib.unshortenit import bypass_anubis
+
+            kwargs_cha = {
+                'cf_debug': kwargs.get('canonical', {}).get('cf_debug', False),
+                'cf_assistant_ua': kwargs.get('canonical', {}).get('cf_assistant_ua', False),
+                'challenge_api': kwargs.get('canonical', {}).get('challenge_api', None),
+                'challenge_post': kwargs.get('canonical', {}).get('challenge_post', False),
+                'cookies_clear': kwargs.get('canonical', {}).get('cookies_clear', True),
+                'challenge': challenge, 
+            }
+            req = bypass_anubis(url, response, **kwargs_cha)
+            if req and req.status_code in self.SUCCESS_CODES + self.REDIRECTION_CODES:
+                return req
+        except Exception:
+            #logger.error(traceback.format_exc())
+            pass
+
+        import requests
+        from lib.cloudscraper import cf_assistant
+
+        req = requests.Response()
+        req.status_code = 403
+        kwargs_cha = copy.deepcopy(kwargs)
+        kwargs_cha.update(kwargs.get("canonical", {}))
+        kwargs_cha["url"] = url
+
+        req = cf_assistant.get_cl(kwargs_cha, req, cache=True, httptools_obj=self.httptools)
+
+        return req
 
     def list_all(self, item, data='', matches_post=None, postprocess=None, generictools=False, 
                  finds={}, **kwargs):
