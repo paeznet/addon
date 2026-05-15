@@ -138,13 +138,16 @@ if [ "$GENERATE_CHANGELOG" -eq 1 ]; then
     ((ADULT_CHANGED == 1)) && SHOWN_FILES+=("+18")
 
     IFS=$'\n' SHOWN_FILES=($(sort <<<"${SHOWN_FILES[*]}"))
+    if [ "${#SHOWN_FILES[@]}" -eq 0 ]; then
+        SHOWN_FILES=("Correcciones y mejoras")
+    fi
 
     if [ "$DRY_RUN" -eq 1 ]; then
         [ "$QUIET" -eq 0 ] && echo "Dry-run: changelog and screenshot would be generated."
     elif [ "$QUIET" -eq 1 ]; then
-        python $(pwd)/scripts/changelog_generator.py ${SHOWN_FILES[*]} -c -v $VERSION -o $SCREENSHOT_PATH -l $CHANGELOG_PATH >/dev/null
+        python $(pwd)/scripts/changelog_generator.py "${SHOWN_FILES[@]}" -c -v $VERSION -o $SCREENSHOT_PATH -l $CHANGELOG_PATH >/dev/null
     else
-        python $(pwd)/scripts/changelog_generator.py ${SHOWN_FILES[*]} -c -v $VERSION -o $SCREENSHOT_PATH -l $CHANGELOG_PATH
+        python $(pwd)/scripts/changelog_generator.py "${SHOWN_FILES[@]}" -c -v $VERSION -o $SCREENSHOT_PATH -l $CHANGELOG_PATH
     fi
 fi
 
