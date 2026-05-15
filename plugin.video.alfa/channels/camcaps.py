@@ -79,7 +79,7 @@ def mainlist(item):
     logger.info()
     itemlist = []
     itemlist.append(Item(channel=item.channel, title="3dsexanime" , action="submenu", url= "https://www.3dsexanime.xyz/", chanel="3dsexanime", thumbnail= "https://www.3dsexanime.xyz/images/logo/logo.png"))
-    # itemlist.append(Item(channel=item.channel, title="CamCaps" , action="submenu", url= "https://camcaps.to/", chanel="camcaps", thumbnail= "https://camcaps.to/images/logo/logo.png", cat="yes"))
+    itemlist.append(Item(channel=item.channel, title="CamCaps" , action="submenu", url= "https://camcaps.to/", chanel="camcaps", thumbnail= "https://camcaps.to/images/logo/logo.png", cat="yes"))
     itemlist.append(Item(channel=item.channel, title="simpvids" , action="submenu", url= "https://simpvids.com/", chanel="simpvids", thumbnail= "https://simpvids.com/images/logo/logo.png", cat="yes"))
     # itemlist.append(Item(channel=item.channel, title="FansTube" , action="submenu", url= "https://fanstube.net/", chanel="fanstube", thumbnail = "https://i.postimg.cc/gJH23yWB/fanstube.png"))
     # itemlist.append(Item(channel=item.channel, title="LeakedBay" , action="submenu", url= "https://leakedbay.com/", chanel="leakedbay", thumbnail = "https://i.postimg.cc/qvwwDSGk/leakedbay.png"))

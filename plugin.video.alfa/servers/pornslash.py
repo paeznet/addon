@@ -18,8 +18,6 @@ from bs4 import BeautifulSoup
 kwargs = {'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 5, 'ignore_response_code': True, 'cf_assistant': False}
 
 
-
-
 def test_video_exists(page_url):
     global data
     logger.info("(page_url='%s')" % page_url)
@@ -43,16 +41,17 @@ def get_video_url(page_url, premium=False, user="", password="", video_password=
     soup = soup.find('div', class_='video-player').find('script').string
     m3u8_source = scrapertools.find_single_match(soup, 'fetch\("([^"]+)"')
     
-    if "master" in m3u8_source:
-        datos = httptools.downloadpage(m3u8_source).data
-        if sys.version_info[0] >= 3 and isinstance(datos, bytes):
-            datos = "".join(chr(x) for x in bytes(datos))
+    # if "master" in m3u8_source:
+        # datos = httptools.downloadpage(m3u8_source).data
+        # if sys.version_info[0] >= 3 and isinstance(datos, bytes):
+            # datos = "".join(chr(x) for x in bytes(datos))
         
-        if datos:
-            matches_m3u8 = re.compile('#EXT-X-STREAM-INF.*?RESOLUTION=\d+x(\d*)[^\n]*\n([^\n]*)\n', re.DOTALL).findall(datos)
+        # if datos:
+            # matches_m3u8 = re.compile('#EXT-X-STREAM-INF.*?RESOLUTION=\d+x(\d*)[^\n]*\n([^\n]*)\n', re.DOTALL).findall(datos)
             ##matches_m3u8 = re.compile('#EXT-X-STREAM-INF\:[^\n]*\n([^\n]*)\n', re.DOTALL).findall(datos)
-            for quality, url in matches_m3u8:
-                url =urlparse.urljoin(m3u8_source,url)
-                video_urls.append(["[pornslash] %sp" % quality, url])
+            # for quality, url in matches_m3u8:
+                # url =urlparse.urljoin(m3u8_source,url)
+                # video_urls.append(["[pornslash] %sp" % quality, url])
+    video_urls.append(["[pornslash]", m3u8_source])
     
     return video_urls #[::-1]

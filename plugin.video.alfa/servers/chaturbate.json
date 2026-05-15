@@ -4,14 +4,14 @@
     "ignore_urls": [],
     "patterns": [
       {
-        "pattern": "(https://www.camsoda.com/api/v1/video/vtoken/[A-z0-9-]+)",
-        "url": "\\1?username=guest_22596"
+        "pattern": "(https://chaturbate.com/[A-z0-9_-]+)",
+        "url": "\\1"
       }
     ]
   },
   "free": true,
-  "id": "camsoda",
-  "name": "camsoda",
+  "id": "chaturbate",
+  "name": "chaturbate",
   "settings": [
     {
       "default": false,
@@ -38,6 +38,6 @@
       "visible": false
     }
   ],
-  "thumbnail": "https://cachew.camsoda.com/assets/img/camsoda-logo-160x50.png",
+  "thumbnail": "https://i.postimg.cc/LsRbrCn2/chaturbate.png",
   "force_inputstream": "adaptive"
 }
