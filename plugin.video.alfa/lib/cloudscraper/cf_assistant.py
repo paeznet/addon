@@ -193,7 +193,10 @@ def get_cl(
         blacklist_clear = False
         blacklist = False
 
-    if opt.get("cf_no_blacklist", False):
+    if (
+        opt.get("cf_no_blacklist", False)
+        or opt.get("canonical", {}).get("cf_no_blacklist", False)
+    ):
         blacklist_clear = True
         blacklist = False
     if blacklist and not retry:

@@ -13,6 +13,10 @@ from AlfaChannelHelper import DictionaryAllChannel
 from AlfaChannelHelper import re, traceback, time, base64, xbmcgui
 from AlfaChannelHelper import Item, servertools, scrapertools, jsontools, get_thumb, config, logger, filtertools, autoplay, renumbertools
 
+from lib.alfa_assistant import is_alfa_installed
+cf_assistant = True if is_alfa_installed() else False
+debug = config.get_setting('debug_report', default=False)
+
 IDIOMAS = AlfaChannelHelper.IDIOMAS_T
 list_language = list(set(IDIOMAS.values()))
 list_quality_movies = AlfaChannelHelper.LIST_QUALITY_MOVIES_T
@@ -25,9 +29,11 @@ forced_proxy_opt = 'ProxySSL'
 canonical = {
              'channel': 'dontorrent', 
              'host': config.get_setting("current_host", 'dontorrent', default=''), 
-             'host_alt': ["https://dontorrent.racing/", "https://lilatorrent.com/", "https://todotorrents.org/", "https://elitedivx.net/"], 
-             'host_alt_new': ["https://dontorrent.reisen/"], 
-             'host_black_list': ["https://dontorrent.reisen/", "https://dontorrent.pink/", "https://dontorrent.cfd/", 
+             'host_alt': ["https://dontorrent.rocks/", 
+                          "https://todotorrents.org/", "https://elitedivx.net/", "https://divxatope.net/", "https://reinventorrent.org"], 
+             'host_alt_new': ["https://dontorrent.rocks/"], 
+             'host_black_list': ["https://dontorrent.racing/", "https://lilatorrent.com/", 
+                                 "https://dontorrent.reisen/", "https://dontorrent.pink/", "https://dontorrent.cfd/", 
                                  "https://dontorrent.photos/", "https://dontorrent.promo/", "https://dontorrent.info/", 
                                  "https://dontorrent.prof/", "https://dontorrent.club/", "https://www21.dontorrent.link/", 
                                  "https://dontorrent.sarl/", "https://dontorrent.gripe/", "https://reinventorrent.org/", 
@@ -86,8 +92,17 @@ canonical = {
                                  "https://todotorrents.net/", "https://verdetorrent.com/", "https://dontorrent.in/"], 
              'pattern_proxy': r'<a[^>]*class="text-white[^"]+"\s*style="font-size[^"]+"\s*href="([^"]+)"[^>]*>\s*Descargar\s*<\/a>', 
              'proxy_url_test': 'pelicula/25159/The-Batman', 
-             'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 1, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
-             'CF': False, 'CF_test': False, 'alfa_s': True, 'renumbertools': False
+             'set_tls': True, 'set_tls_min': False, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 'cf_assistant': cf_assistant, 
+             'cf_assistant_ua': True, 'cf_assistant_get_source': True if cf_assistant == 'force' else False, 
+             'cf_no_blacklist': True, 'cf_removeAllCookies': False if cf_assistant == 'force' else True,
+             'cf_challenge': 1, 'cf_returnkey': 'url', 'cf_partial': True, 'cf_debug': debug, 
+             'cf_cookie': '$HOST|browser-pow-auth' if cf_assistant is True else None, 'cf_jscode': None, 
+             'cf_challenges_list': ['anubis_challenge'], 'challenge_post': False, 'challenge_api': None, 'cookies_clear': True, 
+             'cf_cookies_names': {'browser-pow-auth': False if cf_assistant is True else True},
+             'CF_if_assistant': True if cf_assistant is True else False, 'retries_cloudflare': -1, 
+             'CF_stat': True if cf_assistant is True else False, 
+             'CF': False, 'CF_test': True, 'alfa_s': True, 'renumbertools': False,
+             'data_js': ''
             }
 host = canonical['host'] or canonical['host_alt'][0]
 channel = canonical['channel']
@@ -100,7 +115,6 @@ min_temp = modo_ultima_temp if not modo_ultima_temp else 'continue'
 
 timeout = (5, config.get_setting('timeout_downloadpage', channel))
 kwargs = {}
-debug = config.get_setting('debug_report', default=False)
 movie_path = "/pelicula"
 tv_path = '/serie'
 docu_path = '/documental'
