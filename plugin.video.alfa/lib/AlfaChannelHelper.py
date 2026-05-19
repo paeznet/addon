@@ -253,7 +253,7 @@ class AlfaChannelHelper:
         #logger.debug('KWARGS: %s' % kwargs)
         response = self.httptools.downloadpage(url, **kwargs)
 
-        if kwargs["canonical"].get("cf_challenges_list"):
+        if kwargs.get("canonical", {}).get("cf_challenges_list"):
             for challenge in kwargs["canonical"]["cf_challenges_list"]:
                 if challenge in str(response.data):
                     req = self.anubis_challenge(url, response, challenge, **kwargs)
