@@ -247,8 +247,6 @@ def play(item):
         lista.insert (2, pornstar)
     item.contentTitle = ' '.join(lista)
     
-    url = scrapertools.find_single_match(data, '"embedUrl":"([^"]+)"')
-    url = url.replace("\\", "")
-    itemlist.append(Item(channel=item.channel, action="play", title= "%s", contentTitle = item.contentTitle, url=url))
+    itemlist.append(Item(channel=item.channel, action="play", title= "%s", contentTitle = item.contentTitle, url=item.url))
     itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
     return itemlist

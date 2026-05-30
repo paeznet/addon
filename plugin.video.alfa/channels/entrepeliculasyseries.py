@@ -40,6 +40,7 @@ kwargs = {}
 debug = config.get_setting('debug_report', default=False)
 movie_path = "pelicula"
 tv_path = 'serie'
+anime_path = 'anime'
 language = []
 url_replace = []
 year = datetime.now().strftime('%Y')
@@ -153,7 +154,7 @@ def section_matches(item, matches_int, **AHkwargs):
     if 'Géneros' in item.title:
         for elem in matches_int:
             elem_json = {}
-            #logger.error(elem)
+            # logger.error(elem)
             
             elem_json['url'] = elem.get('href', '')
             elem_json['title'] = elem.get_text(strip=True).replace("(", " (")
@@ -187,7 +188,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
             elem_json['year'] = elem.find('span', class_='tag').get_text(strip=True).strip()
             
             if item.c_type == 'peliculas' and movie_path not in elem_json['url']: continue
-            if item.c_type == 'series' and tv_path not in elem_json['url']: continue
+            if item.c_type == 'series' and tv_path not in elem_json['url'] and anime_path not in elem_json['url']: continue
             elem_json['mediatype'] = 'movie' if movie_path in elem_json['url'] else (elem_json.get('mediatype') or 'tvshow')
             
             if not elem_json['url']: continue
@@ -214,8 +215,7 @@ def seasons_matches(item, matches_int, **AHkwargs):
     
     matches = []
     findS = AHkwargs.get('finds', finds)
-    
-    logger.debug(matches_int)
+
     for elem in matches_int:
         elem_json = {}
         # logger.error(elem)
@@ -235,7 +235,7 @@ def seasons_matches(item, matches_int, **AHkwargs):
             continue
         
         matches.append(elem_json.copy())
-        logger.info(matches, True)
+
     return matches
 
 def episodios(item):
@@ -304,8 +304,9 @@ def findvideos(item):
 
 def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
     logger.info()
+    
     import ast
-    from lib.pyberishaes import GibberishAES
+    from lib.unshortenit import bypass_embed69
     
     matches = []
     findS = AHkwargs.get('finds', finds)
@@ -314,13 +315,14 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
     
     for elem in matches_int:
         elem_json = {}
-        #logger.error(elem)
+        # logger.error(elem)
         
         try:
             headers = {'Referer': item.url}
             
             url = elem.iframe.get("src", '')
-                
+            if not url.startswith("http"): url = AlfaChannel.urljoin(host, url)
+            
             if "/uqlink." in url:
                 url = scrapertools.find_single_match(url, "id=([A-z0-9]+)")
                 elem_json['url'] = "https://uqload.io/embed-%s.html" % url
@@ -336,27 +338,25 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
             
             else:
                 headers = {'Referer': host}
-                data = AlfaChannel.httptools.downloadpage(url).data
+                data = AlfaChannel.create_soup(url, soup=False, hide_infobox=True).data
                 soup = AlfaChannel.do_soup(data, encoding='utf-8')
                 matches_servers = soup.find('div', class_='OptionsLangDisp')
                 
-                if "embed69" in url and "No folders found" not in data:
-                    import ast
+                if ("embed69" in url and "No folders found" not in data) or "vidurl" in url:
+                    clave, data = bypass_embed69(data)
                     
-                    clave = scrapertools.find_single_match(data, r"decryptLink\(server.link, '(.+?)'\),")
                     dataLinkString = scrapertools.find_single_match(data, r"dataLink\s*=\s*([^;]+)")
-                    
                     dataLinkString = dataLinkString.replace(r"\/", "/")
                     dataLink = ast.literal_eval(dataLinkString)
+                    
                     for langSection in dataLink:
                         language = langSection.get('video_language', 'LAT')
                         language = IDIOMAS.get(language, language)
-                        for elem in langSection['sortedEmbeds']:
-                            if elem['servername'] != "download":
-                                vid = elem['link']
+                        for elem_ in langSection.get('sortedEmbeds', []):
+                            if elem_['servername'] != "download":
+                                vid = elem_['link']
                                 if clave:
-                                    from lib.crylink import crylink
-                                    elem_json['url'] = crylink(vid, clave)
+                                    elem_json['url'] = vid
                                 else:
                                     vid = scrapertools.find_single_match(vid, '\.(eyJs.*?)\.')
                                     vid += "="
@@ -365,22 +365,22 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
                                 elem_json['server'] = ''
                                 elem_json['language'] = language
                                 matches.append(elem_json.copy())
-                    
-                    else:
-                        for elem in matches_servers.find_all('li'):
-                            lang = elem['data-lang']
-                            url = elem['onclick']
-                            url = scrapertools.find_single_match(url, "\('([^']+)'")
-                            
-                            if "1fichier=" in url or "1fichier" in server:
-                                id = scrapertools.find_single_match(url, '=\?([A-z0-9]+)')
-                                url = "https://1fichier.com/?%s" %id
-                            
-                            server = elem.span.text.strip()
-                            elem_json['url'] = url
-                            elem_json['server'] = servers.get(server, server)
-                            elem_json['language'] = IDIOMAS.get(lang, lang)
-                            matches.append(elem_json.copy())
+                
+                else:
+                    for elem_ in matches_servers.find_all('li'):
+                        lang = elem_['data-lang']
+                        url = elem_['onclick']
+                        url = scrapertools.find_single_match(url, "\('([^']+)'")
+                        
+                        if "1fichier=" in url or "1fichier" in server:
+                            id = scrapertools.find_single_match(url, '=\?([A-z0-9]+)')
+                            url = "https://1fichier.com/?%s" %id
+                        
+                        server = elem_.span.text.strip()
+                        elem_json['url'] = url
+                        elem_json['server'] = ''
+                        elem_json['language'] = IDIOMAS.get(lang, lang)
+                        matches.append(elem_json.copy())
         except:
             logger.error(elem)
             logger.error(traceback.format_exc())

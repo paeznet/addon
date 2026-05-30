@@ -208,6 +208,10 @@
         "url": "\\1"
       },
       {
+        "pattern": "(https://xcafe.com/[0-9]+/)",
+        "url": "\\1"
+      },
+      {
         "pattern": "(https://(?:www.|)xxxshake.com/videos/[0-9]+/[A-z0-9-]+)",
         "url": "\\1"
       }
