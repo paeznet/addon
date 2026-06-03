@@ -19,7 +19,10 @@ list_quality_movies = AlfaChannelHelper.LIST_QUALITY_MOVIES_T
 list_quality_tvshow = AlfaChannelHelper.LIST_QUALITY_TVSHOW
 list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_T
-forced_proxy_opt = 'ProxySSL'
+
+cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
+forced_proxy_opt = None if cf_assistant else None
+debug = config.get_setting('debug_report', default=False)
 
 canonical = {
              'channel': 'mejortorrent', 
@@ -33,8 +36,10 @@ canonical = {
                                  "https://www3.mejortorrent.rip/", 'https://mejortorrent.cc/', 'https://mejortorrent.one/', 
                                  'https://mejortorrent.nz', 'https://www.mejortorrentes.org/'], 
              'pattern': '<div\s*class="header-logo[^>]*>\s*<a\s*href="([^"]+)"', 
-             'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 1, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
-             'CF': False, 'CF_test': False, 'alfa_s': True, 'renumbertools': False
+             'set_tls': True, 'set_tls_min': True, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
+             'retries_cloudflare': -1 if cf_assistant else 1, 
+             'CF': False, 'CF_test': False, 'alfa_s': True, 'renumbertools': False,
+             'data_js': ''
             }
 host = canonical['host'] or canonical['host_alt'][0]
 host_torrent = host

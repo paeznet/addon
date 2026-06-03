@@ -13,8 +13,6 @@ from AlfaChannelHelper import DictionaryAllChannel
 from AlfaChannelHelper import re, traceback, time, base64, xbmcgui
 from AlfaChannelHelper import Item, servertools, scrapertools, jsontools, get_thumb, config, logger, filtertools, autoplay, renumbertools
 
-from lib.alfa_assistant import is_alfa_installed
-
 # Canal común con Kacktorrent, Pelispanda
 
 IDIOMAS = AlfaChannelHelper.IDIOMAS_T
@@ -23,10 +21,9 @@ list_quality_movies = AlfaChannelHelper.LIST_QUALITY_MOVIES_T
 list_quality_tvshow = AlfaChannelHelper.LIST_QUALITY_TVSHOW
 list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_T
-forced_proxy_opt = 'ProxySSL'
 
-cf_assistant = True if is_alfa_installed() else False
-forced_proxy_opt = None if cf_assistant else 'ProxyCF'
+cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
+forced_proxy_opt = None if cf_assistant else 'ProxySSL'
 debug = config.get_setting('debug_report', default=False)
 
 canonical = {
@@ -34,14 +31,10 @@ canonical = {
              'host': config.get_setting("current_host", 'pelispanda', default=''), 
              'host_alt': ['https://pelispanda.org/'], 
              'host_black_list': ['https://pelispanda.win/', 'https://pelispanda.re/', 'https://pelispanda.com/'], 
-             'set_tls': True, 'set_tls_min': True, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 'cf_assistant': cf_assistant, 
-             'cf_assistant_ua': True, 'cf_assistant_get_source': True if cf_assistant == 'force' else False, 
-             'cf_no_blacklist': True, 'cf_removeAllCookies': False if cf_assistant == 'force' else True,
-             'cf_challenge': True, 'cf_returnkey': 'url', 'cf_partial': True, 'cf_debug': debug, 
-             'cf_cookies_names': {'cf_clearance': False},
-             'CF_if_assistant': True if cf_assistant is True else False, 'retries_cloudflare': -1, 
-             'CF_stat': True if cf_assistant is True else False, 'session_verify': True, 
-             'CF': False, 'CF_test': False, 'alfa_s': True, 'renumbertools': False
+             'set_tls': True, 'set_tls_min': True, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
+             'retries_cloudflare': -1 if cf_assistant else 1, 'session_verify': True, 
+             'CF': False, 'CF_test': False, 'alfa_s': True, 'renumbertools': False, 
+             'data_js': ''
             }
 host = canonical['host'] or canonical['host_alt'][0]
 channel = canonical['channel']

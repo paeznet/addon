@@ -15,7 +15,6 @@ from AlfaChannelHelper import Item, servertools, scrapertools, jsontools, get_th
 
 import ast
 from platformcode.platformtools import dialog_notification, dialog_ok, itemlist_refresh, itemlist_update, show_channel_settings
-from lib.alfa_assistant import is_alfa_installed
 
 IDIOMAS = AlfaChannelHelper.IDIOMAS_T
 list_language = list(set(IDIOMAS.values()))
@@ -24,7 +23,7 @@ list_quality_tvshow = AlfaChannelHelper.LIST_QUALITY_TVSHOW
 list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS
 
-cf_assistant = True if is_alfa_installed() else False
+cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
 forced_proxy_opt = None
 debug = config.get_setting('debug_report', default=False)
 
@@ -33,9 +32,9 @@ debug = config.get_setting('debug_report', default=False)
 canonical = {
              'channel': 'hdfull', 
              'host': config.get_setting("current_host", 'hdfull', default=''), 
-             "host_alt": ["https://hdfull.today/", "https://hdfull.sbs/", 
+             "host_alt": ["https://hdfull.today/", "https://hdfull.sbs/", "https://hdfull.love/", 
                           "https://www3.hdfull.one/", "https://hdfull.org/"], 
-             "host_alt_main": 2, 
+             "host_alt_main": 3, 
              "host_verification": '%slogin', 
              "host_black_list": ["https://hdfull.one/", "https://hd-full.biz/", "https://hdfull.cfd/",
                                  "https://www2.hdfull.one/", "https://hdfull.help/", "https://hdfull.cv/", "https://hdfull.blog/",
@@ -44,7 +43,7 @@ canonical = {
                                  "https://hd-full.fit/", "https://hd-full.info/", "https://hd-full.life/", 
 
                                  "https://hdfull.cv/", "https://hdfull.monster/", "https://hdfull.buzz/", 
-                                 "https://hdfull.tel/", "https://hd-full.sbs/", "https://hdfull.love/", 
+                                 "https://hdfull.tel/", "https://hd-full.sbs/", 
 
                                  "https://hd-full.lol/", "https://hd-full.co/", "https://hdfull.quest/", 
                                  "https://hd-full.in/", "https://hd-full.im/", "https://hd-full.one/", 
@@ -55,16 +54,11 @@ canonical = {
                                  "https://new.hdfull.one/", "https://hdfull.top/", "https://hdfull.bz/"],
              'pattern': r'<meta\s*property="og:url"\s*content="([^"]+)"', 
              "canonical_no_check_list": [],
-             'set_tls': True, 'set_tls_min': False, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 'cf_assistant': cf_assistant, 
-             'cf_assistant_ua': True, 'cf_assistant_get_source': True if cf_assistant == 'force' else False, 
-             'cf_no_blacklist': True, 'cf_removeAllCookies': False if cf_assistant == 'force' else True,
-             'cf_challenge': 1, 'cf_returnkey': 'url', 'cf_partial': True, 'cf_debug': debug, 
-             'cf_cookie': '$HOST|cf_clearance' if cf_assistant is True else None, 'cf_jscode': None, 
-             'cf_cookies_names': {'cf_clearance': False if cf_assistant is True else True},
-             'CF_if_assistant': True if cf_assistant is True else False, 'retries_cloudflare': -1, 
-             'CF_stat': True if cf_assistant is True else False, 
+             'set_tls': True, 'set_tls_min': False, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
+             'retries_cloudflare': -1 if cf_assistant else 1, 
+             'retry_alt': False, 'CF_proxy_alt': False, 'canonical_check': False, 
              'CF': False, 'CF_test': True, 'alfa_s': True, 'renumbertools': False,
-             'data_js': ''
+             'data_js': '', 'domains_test': 0
             }
 host = canonical['host'] or canonical['host_alt'][0]
 host_thumb = 'https://hdfullcdn.cc/'
@@ -124,9 +118,13 @@ AlfaChannel = DictionaryAllChannel(host, movie_path=movie_path, tv_path=tv_path,
                                    idiomas=IDIOMAS, language=language, list_language=list_language, list_servers=list_servers, 
                                    list_quality_movies=list_quality_movies, list_quality_tvshow=list_quality_tvshow, 
                                    channel=canonical['channel'], actualizar_titulos=True, url_replace=url_replace, debug=debug)
+if canonical.get('host_alt_main', 0) > len(canonical['host_alt']) - 1: canonical['host_alt_main'] = 0
 host_main = canonical['host_alt'][canonical.get('host_alt_main', 0)]
 host_save = host
 if host in canonical['canonical_no_check_list']: canonical['canonical_check'] = False
+domains_test = canonical['domains_test']
+forced_proxy_opt = canonical.get('forced_proxy_ifnot_assistant', None)
+retry_alt = canonical.get('retry_alt', False)
 
 
 """ CACHING HDFULL PARAMETERS """
@@ -1273,7 +1271,7 @@ def agrupa_datos(url, post=None, referer=True, soup=False, json=False, force_che
     if len(canonical['host_alt']) > 1:
         url = verify_domain_alt(url, post=post, headers=headers, soup=False, json=False, alfa_s=alfa_s or hide_infobox)
 
-    page = AlfaChannel.create_soup(url, post=post, headers=headers, ignore_response_code=True, timeout=timeout, 
+    page = AlfaChannel.create_soup(url, post=post, headers=headers, ignore_response_code=True, timeout=timeout, retry_alt=retry_alt, 
                                    soup=False, json=False, canonical=canonical, hide_infobox=hide_infobox, alfa_s=alfa_s)
 
     if page.sucess and page.host and host_save not in page.host:
@@ -1329,17 +1327,23 @@ def verify_domain_alt(url, post=None, headers={}, soup=False, json=False, alfa_s
         url_rest = url.replace(host_alt, '')
         canonical_alt = canonical.copy()
 
-        for host_alt in canonical['host_alt']:
+        for x, host_alt in enumerate(canonical['host_alt']):
             canonical_alt['host'] = host_alt
             canonical_alt['host_alt'] = [host_alt]
+            canonical_alt['proxy_retries'] = 1 if x < canonical.get('host_alt_main', 3) else 0
+            canonical_alt['retries_cloudflare'] = 0 if x < canonical.get('host_alt_main', 3) else -1
+            canonical_alt['canonical_check'] = True if x < canonical.get('host_alt_main', 3) else False
+            canonical_alt['forced_proxy_ifnot_assistant'] = 'ProxySSL' if x < canonical.get('host_alt_main', 3) else None
+            retry_alt_alt = True if x < canonical.get('host_alt_main', 3) else False
             headers['Referer'] = host_alt
             page = AlfaChannel.create_soup(host_alt + url_rest, post=post, headers=headers, ignore_response_code=True, timeout=timeout, 
-                                           soup=soup, json=json, canonical=canonical_alt, alfa_s=alfa_s, proxy_retries=0, retries_cloudflare=0,
-                                           canonical_check=False)
-            if page.sucess:
+                                           retry_alt=retry_alt_alt, soup=soup, json=json, canonical=canonical_alt, alfa_s=alfa_s)
+            if page.sucess and scrapertools.find_single_match(page.data, r'og\:site_name"\s*content="HDFull'):
                 url = host_alt + url_rest
-                break
+                canonical['preferred_proxy_ip'] = canonical_alt.pop('preferred_proxy_ip', '')
+                if not domains_test: break
             logger.debug('Host dropped: %s - Code: %s' % (host_alt, page.code))
+            if domains_test > 0 and x >= domains_test: break
         window.setProperty("AH_hdfull_domain", host_alt)
         logger.debug('New Host: %s - Code: %s' % (host_alt, page.code))
 
@@ -1354,7 +1358,7 @@ def verify_domain_alt(url, post=None, headers={}, soup=False, json=False, alfa_s
             canonical['host_alt'].remove(host_alt_)
         if config.get_setting("current_host", canonical['channel'], default='') != host:
             config.set_setting("current_host", host, canonical['channel'])
-        
+
     return url
     
 

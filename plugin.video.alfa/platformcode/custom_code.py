@@ -19,7 +19,7 @@ from platformcode import platformtools
 from core import jsontools
 from core import scrapertools
 from core.item import Item
-from lib.alfa_assistant import execute_binary_from_alfa_assistant, open_alfa_assistant
+from lib.alfa_assistant import execute_binary_from_alfa_assistant, open_alfa_assistant, is_alfa_installed
 
 try:
     monitor = xbmc.Monitor()
@@ -1768,7 +1768,10 @@ def set_updated_domains():
         window = xbmcgui.Window(10000) or None
 
         alfa_domains_updated = get_cached_files("domains") or {}
-        window.setProperty("alfa_domains_updated", jsontools.dump(alfa_domains_updated))
+        if window: window.setProperty("alfa_domains_updated", jsontools.dump(alfa_domains_updated))
+
+        if window and is_alfa_installed():
+            window.setProperty("is_assistant_installed", "True")
 
     except Exception:
         logger.error(traceback.format_exc())
