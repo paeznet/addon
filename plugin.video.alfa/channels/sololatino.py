@@ -316,7 +316,6 @@ def episodesxseasons(item):
     except:
         return itemlist
     
-    
     for elem in matches:
         url = elem["href"]
         ep_num = elem.find('p', class_='ep-num')
@@ -332,6 +331,9 @@ def episodesxseasons(item):
 
 
 def findvideos(item):
+    import ast
+    from lib.unshortenit import bypass_embed69
+    
     logger.info()
     itemlist = list()
     
@@ -341,15 +343,28 @@ def findvideos(item):
     matches = scrapertools.find_multiple_matches(data, 'data-server-url="([^"]+)"')
     # logger.debug(matches)
     
+    if not matches:
+        buffer = scrapertools.find_single_match(data, '<div\s*class="flex\s*gap-2\s*flex-wrap">[^!]+<\/div>')
+        matches_ = scrapertools.find_multiple_matches(buffer, '<button\s*class="server-btn"\s*data-server-btn\s*data-player-\w+="([^"]+)"\s*(?:data-player-model="([^"]+)")?\s*>\s*(.*?)\s*<\/button>')
+        api = 'api/player-url'
+        for id, contenttype, server in matches_:
+            if 'premium' in server.lower(): continue
+            if contenttype:
+                url = host + api + '/%s/%s' % (contenttype, id)
+                post = None
+            else:
+                url = host + api
+                post = {'t': id}
+            json = httptools.downloadpage(url, post=post, headers=headers, referer=host, hide_infobox=True).json
+            matches.append((json.get('url', '')))
+    
     for elem in matches:
         data = httptools.downloadpage(elem, referer=host).data
         # logger.debug(data)
         if "embed69" in elem:
-            import ast
+            clave, data = bypass_embed69(data)
             
-            clave = scrapertools.find_single_match(data, r"decryptLink\(server.link, '(.+?)'\),")
             dataLinkString = scrapertools.find_single_match(data, r"dataLink\s*=\s*([^;]+)")
-            
             dataLinkString = dataLinkString.replace(r"\/", "/")
             dataLink = ast.literal_eval(dataLinkString)
             
@@ -359,10 +374,7 @@ def findvideos(item):
                 for elem in langSection['sortedEmbeds']:
                     if elem['servername'] != "download":
                         vid = elem['link']
-                        if clave:
-                            from lib.crylink import crylink
-                            vid = crylink(vid, clave)
-                        else:
+                        if not clave:
                             vid = scrapertools.find_single_match(vid, '\.(eyJs.*?)\.')
                             vid += "="
                             vid = base64.b64decode(vid).decode()
@@ -396,7 +408,7 @@ def findvideos(item):
                 if "plusvip" not in vid:
                     itemlist.append(Item(channel=item.channel, title='%s', action='play', url=vid,
                                                language=language, infoLabels=item.infoLabels))
-
+        
         # else:
                       # OK  https://player.pelisserieshoy.com/s.php?a=2&tok=91a99c66cee851e7f7c022131f32f44f&v=cd86f004dda3c80540ac2aed5ecb63fc
                           # https://player.pelisserieshoy.com/s.php?a=2&v=cd86f004dda3c80540ac2aed5ecb63fc&tok=91a99c66cee851e7f7c022131f32f44f

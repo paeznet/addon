@@ -16,11 +16,10 @@ from modules import autoplay
 list_quality = []
 list_servers = []
 
-
 canonical = {
              'channel': 'gimmeporn', 
              'host': config.get_setting("current_host", 'gimmeporn', default=''), 
-             'host_alt': ["https://www2.gimmeporn.xyz/"], 
+             'host_alt': ["https://gimmeporn.xyz/"], 
              'host_black_list': [], 
              'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 1, 'cf_assistant': False, 
              'CF': False, 'CF_test': False, 'alfa_s': True
@@ -31,17 +30,17 @@ host = canonical['host'] or canonical['host_alt'][0]
 def mainlist(item):
     logger.info()
     itemlist = []
-
+    
     autoplay.init(item.channel, list_servers, list_quality)
-
+    
     itemlist.append(Item(channel=item.channel, title="Nuevos" , action="lista", url=host))
     itemlist.append(Item(channel=item.channel, title="JAV" , action="lista", url=host + "category/03/jav/"))
     itemlist.append(Item(channel=item.channel, title="Canal" , action="categorias", url=host + "channel/"))
     itemlist.append(Item(channel=item.channel, title="Categorias" , action="categorias", url=host + "category/"))
     itemlist.append(Item(channel=item.channel, title="Buscar", action="search"))
-
+    
     autoplay.show_option(item.channel, itemlist)
-
+    
     return itemlist
 
 
@@ -96,7 +95,7 @@ def lista(item):
         thumbnail = elem.img['src']
         if "gif" in thumbnail:
             thumbnail = elem.img['data-src'].replace("-320x180", "")
-
+        
         plot = ""
         itemlist.append(Item(channel=item.channel, action="findvideos", title=title, contentTitle=title, url=url,
                              fanart=thumbnail, thumbnail=thumbnail , plot=plot) )
