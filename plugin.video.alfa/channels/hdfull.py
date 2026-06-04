@@ -25,6 +25,7 @@ list_servers = AlfaChannelHelper.LIST_SERVERS
 
 cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
 forced_proxy_opt = None
+forced_proxy_opt_alt = 'ProxySSL'
 debug = config.get_setting('debug_report', default=False)
 
 # https://dominioshdfull.com/
@@ -125,6 +126,7 @@ if host in canonical['canonical_no_check_list']: canonical['canonical_check'] = 
 domains_test = canonical['domains_test']
 forced_proxy_opt = canonical.get('forced_proxy_ifnot_assistant', None)
 retry_alt = canonical.get('retry_alt', False)
+debug = debug or canonical.get('print_DEBUG', False)
 
 
 """ CACHING HDFULL PARAMETERS """
@@ -152,7 +154,7 @@ if not user_ or not pass_:
 credentials_req = True
 js_url = AlfaChannel.urljoin(host, "templates/hdfull/js/jquery.hdfull.view.min.js")
 data_js_url = AlfaChannel.urljoin(host, "js/providers.js")
-patron_sid = r"<input\s*type=['|\"]hidden['|\"]\s*name=['|\"]__csrf_magic['|\"]\s*value=\"([^\"]+)\"\s*.*>"
+patron_sid = r"<input\s*(?:type=['|\"]hidden['|\"]\s*)?name=['|\"]__csrf_magic['|\"]\s*(?:type=['|\"]hidden['|\"]\s*)?value=\"([^\"]+)\"\s*.*>"
 timer = AlfaChannel.finds['controls']['timer']
 
 try:
@@ -208,7 +210,7 @@ def mainlist(item):
 
     just_logout = window.getProperty("AH_hdfull_just_logout") or config.get_setting("just_logout", channel=canonical['channel'])
     verify_credentials(force_login=False if just_logout else 'timer')
-    if debug: logger.debug('just_logout: %s, account: %s, sid: %s, user_status: %s' % (just_logout, account, sid, user_status))
+    if debug: logger.info('just_logout: %s, account: %s, sid: %s, user_status: %s' % (just_logout, account, sid, user_status), force=True)
     if just_logout:
         just_logout = ''
         if window: window.setProperty("AH_hdfull_just_logout", str(just_logout))
@@ -1043,9 +1045,9 @@ def search(item, texto, **AHkwargs):
 def verify_credentials(force_login=True, force_check=True):
     global credentials_req, user_, pass_
     
-    if debug: logger.debug('SID: %s; Account: %s; just_logout: %s; force_login: %s; force_check: %s; credentials: %s; credentials_req: %s' \
-                            % (True if sid else False, account, just_logout, force_login, force_check, 
-                               True if user_ and pass_ else False, credentials_req))
+    if debug: logger.info('SID: %s; Account: %s; just_logout: %s; force_login: %s; force_check: %s; credentials: %s; credentials_req: %s' \
+                           % (True if sid else False, account, just_logout, force_login, force_check, 
+                              True if user_ and pass_ else False, credentials_req), force=True)
 
     credentials = True if user_ and pass_ else False
     if not credentials:
@@ -1140,7 +1142,7 @@ def check_login_age(force_check=True):
     time_left = -0.0 if not login_age else (login_age - time_now)
 
     if time_left <= 0.0:
-        logger.debug('Login TIMED OUT: %s m. / %s m.' % (timer, round(time_left/60, 2)))
+        logger.info('Login TIMED OUT: %s m. / %s m.' % (timer, round(time_left/60, 2)), force=True)
         force_login_next()
         login(force_check=force_check)
     else:
@@ -1269,10 +1271,11 @@ def agrupa_datos(url, post=None, referer=True, soup=False, json=False, force_che
     if isinstance(referer, str):
         headers.update({'Referer': referer})
     if len(canonical['host_alt']) > 1:
-        url = verify_domain_alt(url, post=post, headers=headers, soup=False, json=False, alfa_s=alfa_s or hide_infobox)
+        url = verify_domain_alt(url, post=post, headers=headers, soup=False, json=False, alfa_s=not canonical.get('print_DEBUG', False))
 
     page = AlfaChannel.create_soup(url, post=post, headers=headers, ignore_response_code=True, timeout=timeout, retry_alt=retry_alt, 
-                                   soup=False, json=False, canonical=canonical, hide_infobox=hide_infobox, alfa_s=alfa_s)
+                                   soup=False, json=False, canonical=canonical, hide_infobox=hide_infobox, 
+                                   alfa_s=not canonical.get('print_DEBUG', False) or alfa_s or hide_infobox)
 
     if page.sucess and page.host and host_save not in page.host:
         force_login_next()
@@ -1333,7 +1336,7 @@ def verify_domain_alt(url, post=None, headers={}, soup=False, json=False, alfa_s
             canonical_alt['proxy_retries'] = 1 if x < canonical.get('host_alt_main', 3) else 0
             canonical_alt['retries_cloudflare'] = 0 if x < canonical.get('host_alt_main', 3) else -1
             canonical_alt['canonical_check'] = True if x < canonical.get('host_alt_main', 3) else False
-            canonical_alt['forced_proxy_ifnot_assistant'] = 'ProxySSL' if x < canonical.get('host_alt_main', 3) else None
+            canonical_alt['forced_proxy_ifnot_assistant'] = forced_proxy_opt_alt if x < canonical.get('host_alt_main', 3) else None
             retry_alt_alt = True if x < canonical.get('host_alt_main', 3) else False
             headers['Referer'] = host_alt
             page = AlfaChannel.create_soup(host_alt + url_rest, post=post, headers=headers, ignore_response_code=True, timeout=timeout, 
@@ -1342,10 +1345,10 @@ def verify_domain_alt(url, post=None, headers={}, soup=False, json=False, alfa_s
                 url = host_alt + url_rest
                 canonical['preferred_proxy_ip'] = canonical_alt.pop('preferred_proxy_ip', '')
                 if not domains_test: break
-            logger.debug('Host dropped: %s - Code: %s' % (host_alt, page.code))
+            logger.info('Host dropped: %s - Code: %s' % (host_alt, page.code), force=True)
             if domains_test > 0 and x >= domains_test: break
         window.setProperty("AH_hdfull_domain", host_alt)
-        logger.debug('New Host: %s - Code: %s' % (host_alt, page.code))
+        logger.info('New Host: %s - Code: %s' % (host_alt, page.code), force=True)
 
     elif window and window.getProperty("AH_hdfull_domain"):
         host_alt = window.getProperty("AH_hdfull_domain")
@@ -1467,7 +1470,7 @@ def set_status__(item):
 
     data = agrupa_datos(AlfaChannel.urljoin(host, path), post=post, hide_infobox=True)
     check_user_status(reset=True)
-    if debug: logger.debug('Post: %s; Title: %s' % (post, title % agreg))
+    if debug: logger.info('Post: %s; Title: %s' % (post, title % agreg), force=True)
 
     screen_refresh()
 
@@ -1495,7 +1498,7 @@ def get_status(status, elem, mediatype=''):
         mediatype = elem.contentType or mediatype
         season = elem.contentSeason or 0
 
-    if debug: logger.debug('info: %s; list_info: %s; mediatype: %s' % (info, list_info, mediatype))
+    if debug: logger.info('info: %s; list_info: %s; mediatype: %s' % (info, list_info, mediatype), force=True)
     if not status or not account or not mediatype or (not info and not list_info):
         return ""
     
@@ -1547,10 +1550,10 @@ def get_status(status, elem, mediatype=''):
                 if season_list:
                     if isinstance(elem, _dict):
                         elem['episode_list'] = {season: season_list.rstrip(',')}
-                        if debug: logger.debug("elem['episode_list']: %s; %s" % (elem['episode_list'], visto))
+                        if debug: logger.info("elem['episode_list']: %s; %s" % (elem['episode_list'], visto), force=True)
                     else:
                         elem.episode_list = {season: season_list.rstrip(',')}
-                        if debug: logger.debug("elem.episode_list: %s; %s" % (elem.episode_list, visto))
+                        if debug: logger.info("elem.episode_list: %s; %s" % (elem.episode_list, visto), force=True)
                     str2 = state[visto]
                     str2 = " [COLOR %s](%s)[/COLOR]" % ('orange' if 'Siguiendo' in str2 else 'blue', str2)
             

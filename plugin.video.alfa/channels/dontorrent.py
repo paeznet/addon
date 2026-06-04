@@ -21,7 +21,7 @@ list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_T
 
 cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
-forced_proxy_opt = None if cf_assistant else 'ProxySSL'
+forced_proxy_opt = 'ProxySSL'
 debug = config.get_setting('debug_report', default=False)
 
 # Lista de proxies: https://donproxies.com/
@@ -109,7 +109,6 @@ min_temp = modo_ultima_temp if not modo_ultima_temp else 'continue'
 
 timeout = (5, config.get_setting('timeout_downloadpage', channel))
 kwargs = {}
-debug = config.get_setting('debug_report', default=False)
 movie_path = "/pelicula"
 tv_path = '/serie'
 docu_path = '/documental'
@@ -168,6 +167,7 @@ AlfaChannel = DictionaryAllChannel(host, movie_path=movie_path, tv_path=tv_path,
                                    list_quality_movies=list_quality_movies, list_quality_tvshow=list_quality_tvshow, 
                                    channel=canonical['channel'], actualizar_titulos=True, url_replace=url_replace, debug=debug)
 host_new = True if canonical.get('host', 'xyz') in canonical.get('host_alt_new', []) else False
+debug = debug or canonical.get('print_DEBUG', False)
 
 
 def mainlist(item):

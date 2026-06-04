@@ -23,7 +23,7 @@ list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_T
 
 cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
-forced_proxy_opt = None if cf_assistant else 'ProxySSL'
+forced_proxy_opt = 'ProxySSL'
 debug = config.get_setting('debug_report', default=False)
 
 canonical = {
@@ -44,7 +44,6 @@ min_temp = modo_ultima_temp if not modo_ultima_temp else 'continue'
 
 timeout = config.get_setting('timeout_downloadpage', channel)
 kwargs = {}
-debug = config.get_setting('debug_report', default=False)
 movie_path = "/peliculas"
 tv_path = '/series'
 anime_path = '/animes'
