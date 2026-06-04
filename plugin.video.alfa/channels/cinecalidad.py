@@ -85,7 +85,8 @@ finds = {'find': {'find_all': [{'tag': ['article']}]},
          'episode_num': [], 
          'episode_clean': [], 
          'plot': {}, 
-         'findvideos': {'find_all': [{'tag': ['a'], 'class': ['inline-block']}]}, 
+         'findvideos': dict([('find', [{'tag': ['ul'], 'class': ['py-2 options dff']}]), 
+                             ('find_all', [{'tag': ['a'], 'class': ['inline-block']}])]), 
          'title_clean': [[r'(?i)TV|Online|(4k-hdr)|(fullbluray)|4k| - 4k|(3d)|miniserie|\s*imax', ''],
                          [r'(?i)[\[|\(]?\d{3,4}p[\]|\)]?|[\[|\(]?(?:4k|3d|uhd|hdr)[\]|\)]?', ''], 
                          [r'(?i)[-|\(]?\s*HDRip\)?|microHD|\(?BR-LINE\)?|\(?HDTS-SCREENER\)?', ''], 
@@ -369,7 +370,7 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
     
     for elem in matches_int:
         elem_json = {}
-        #logger.error(elem)
+        logger.error(elem)
         
         try:
             elem_json['url'] = base64.b64decode(elem.get("data-url", "") or elem.get("data-src", "")).decode('utf-8')
@@ -381,7 +382,7 @@ def findvideos_matches(item, matches_int, langs, response, **AHkwargs):
                     elem_json['url'] = AlfaChannel.create_soup(elem_json['url'], **kwargs).find("div", id="btn_enlace").a.get("href", "")
 
             elem_json['server'] = elem.get_text(strip=True).lower().replace('utorrent', 'torrent')
-            if elem_json['server'] in ["Cineplay", "Netu", "trailer", "Fembed", "acortalink"]: continue
+            if elem_json['server'] in ["Cineplay", "Netu", "trailer", "Fembed", "dood", "Doodstream"]: continue
             if elem_json['server'] in srv_ids:
                 elem_json['server'] = srv_ids[elem_json['server']]
             
@@ -430,7 +431,7 @@ def search(item, texto, **AHkwargs):
     kwargs = AHkwargs
 
     itemlist = []
-    texto = texto.replace(" ", "-")
+    texto = texto.replace(" ", "+")
 
     item.url = host + '?s=' + texto
 

@@ -71,6 +71,7 @@ LIST_QUALITY_TVSHOW = ['HDTV-720p', 'HDTV', 'WEB-DL 1080p', '4KWebRip']
 SIZE_MATCHES = 5000
 TAG_TVSHOW_RENUMERATE = renumbertools.TAG_TVSHOW_RENUMERATE
 TAG_SEASON_EPISODE = renumbertools.TAG_SEASON_EPISODE
+IS_ASSISTANT_INSTALLED = True if window.getProperty("is_assistant_installed") else False
 
 
 class AlfaChannelHelper:
@@ -135,7 +136,9 @@ class AlfaChannelHelper:
         self.response_preferred_proxy_ip = ''                                   # IP de ProxySSL reusable, usada en la última descarga de un canal
         self.alfa_domain_web_list = jsontools.load(window.getProperty("alfa_domain_web_list")) \
                                                    if window.getProperty("alfa_domain_web_list") else {}    # Lista de PoxySSL verificados
+        self.alfa_cached_passwords = {}
         self.headers = {}
+        self.print_DEBUG = canonical.get('print_DEBUG', False)
         
         self.SUCCESS_CODES = self.httptools.SUCCESS_CODES
         self.REDIRECTION_CODES = self.httptools.REDIRECTION_CODES
@@ -173,6 +176,7 @@ class AlfaChannelHelper:
                                                              or self.domains_updated[self.channel].get('UPDATE_CANONICAL')):
                     if self.host != self.domains_updated[self.channel].get('host_alt', [''])[0] or self.host != self.canonical['host_alt'][0] \
                                     or self.domains_updated[self.channel].get('host_alt', []) != self.canonical['host_alt'] \
+                                    or self.domains_updated[self.channel].get('host_black_list', []) != self.canonical['host_black_list'] \
                                     or self.domains_updated[self.channel].get('UPDATE_CANONICAL'):
                         self.host = self.canonical['host'] = self.domains_updated[self.channel].get('host_alt', ([self.canonical['host']] \
                                                                                                     if self.canonical['host'] else []) \
@@ -183,16 +187,18 @@ class AlfaChannelHelper:
                             channel.host = self.host
                         self.canonical['host_black_list'] = self.domains_updated[self.channel].get('host_black_list', 
                                                                                  self.canonical['host_black_list'])
-                        if self.canonical['host_alt'][0] not in self.canonical['host_black_list'] \
-                                                         and self.canonical['host_alt'][0] not in self.domains_updated[self.channel]\
-                                                                                                  .get('host_alt', self.canonical['host_alt'])[0]: 
-                            self.canonical['host_black_list'].insert(0, self.canonical['host_alt'][0])
-                        del self.canonical['host_alt'][0]
-                        if self.host not in self.canonical['host_alt']: self.canonical['host_alt'].insert(0, self.host)
+                        for host_alt in self.canonical['host_alt'][:]:
+                            if host_alt not in self.canonical['host_black_list'] \
+                                        and host_alt not in self.domains_updated[self.channel]\
+                                                                .get('host_alt', self.canonical['host_alt']): 
+                                self.canonical['host_black_list'].insert(0, host_alt)
+                                self.canonical['host_alt'].remove(host_alt)
+                        self.canonical['host_alt'] = self.domains_updated[self.channel].get('host_alt', self.canonical['host_alt'])
+                        if self.host not in self.canonical['host_alt'] and self.host not in self.canonical['host_black_list']:
+                            self.canonical['host_alt'].insert(0, self.host)
+                        if self.host in self.canonical['host_black_list'] and self.canonical['host_alt']:
+                            self.host = self.canonical['host'] = self.canonical['host_alt'][0]
                         if len(self.domains_updated[self.channel].get('host_alt', [])) > 1:
-                            for host_alt in self.domains_updated[self.channel]['host_alt']:
-                                if host_alt in self.canonical['host_alt']: continue
-                                self.canonical['host_alt'] += [host_alt]
                             for host_alt in self.canonical['host_alt'][:]:
                                 if host_alt in self.canonical['host_black_list']:
                                     self.canonical['host_alt'].remove(host_alt)
@@ -201,6 +207,7 @@ class AlfaChannelHelper:
                         if 'UPDATE_CANONICAL' in self.domains_updated[self.channel]: del self.domains_updated[self.channel]['UPDATE_CANONICAL']
                         if self.domains_updated: self.canonical.update(self.domains_updated[self.channel])
                         if self.DEBUG: logger.debug('HOST_updated: %s TO %s' % (host, self.canonical))
+                        self.print_DEBUG = self.canonical.get('print_DEBUG', False)
         except Exception:
             self.domains_updated = {}
             logger.error(traceback.format_exc())
@@ -216,6 +223,26 @@ class AlfaChannelHelper:
         from lib.generictools import js2py_conversion, check_blocked_IP, get_cached_files_
         get_cached_files_('password')
 
+        if "canonical" not in kwargs: kwargs["canonical"] = self.canonical
+        self.alfa_cached_passwords = jsontools.load(window.getProperty("alfa_cached_passwords") or '{}')
+        if kwargs.get('canonical', {}).get('cf_assistant', True) is not False and IS_ASSISTANT_INSTALLED:
+            kwargs_inter = copy.deepcopy(self.alfa_cached_passwords.get("cookies", {})\
+                                             .get("challenges", {}).get("assistant", {}))
+            kwargs_inter['cf_assistant'] = IS_ASSISTANT_INSTALLED
+            cf_debug = kwargs_inter.get('cf_debug', kwargs.get('canonical', {}).get('cf_debug', config.get_setting('debug_report', default=False)))
+            if kwargs_inter and self.channel not in kwargs_inter.get('c_black_list', []) and kwargs_inter['cf_assistant']:
+                if kwargs.get('canonical', {}).get('cf_assistant', '') == 'force':
+                    kwargs['canonical']['cf_assistant_get_source'] = kwargs.get('canonical', {}).get('cf_assistant_get_source', True)
+                    kwargs['canonical']['cf_removeAllCookies'] = kwargs.get('canonical', {}).get('cf_removeAllCookies', False)
+                    if 'cf_cookie' in kwargs['canonical']: del kwargs['canonical']['cf_cookie']
+                kwargs_inter.update(kwargs.get('canonical', {}))
+                kwargs_inter['cf_debug'] = cf_debug
+                kwargs['canonical'].update(kwargs_inter)
+                if window.getProperty("AH_%s_preferred_proxy_ip" % self.channel):
+                    self.response_preferred_proxy_ip = window.getProperty("AH_%s_preferred_proxy_ip" % self.channel)
+                    kwargs['preferred_proxy_ip'] = self.response_preferred_proxy_ip
+                    kwargs['canonical']['preferred_proxy_ip'] = self.canonical['preferred_proxy_ip'] = self.response_preferred_proxy_ip
+
         if "soup" not in kwargs: kwargs["soup"] = True
         json = kwargs.pop("json", False)
         if "unescape" in kwargs: self.unescape = kwargs.get("unescape", False)
@@ -226,7 +253,6 @@ class AlfaChannelHelper:
                                    and "add_referer" not in kwargs:
             kwargs["add_referer"] = True
         if "ignore_response_code" not in kwargs: kwargs["ignore_response_code"] = True
-        if "canonical" not in kwargs: kwargs["canonical"] = self.canonical
         if "forced_proxy_opt" not in kwargs and "forced_proxy_opt" not in kwargs["canonical"] and self.forced_proxy_opt:
             kwargs["forced_proxy_opt"] = self.forced_proxy_opt
         if "timeout" not in kwargs and "timeout" not in kwargs["canonical"]:
@@ -253,9 +279,22 @@ class AlfaChannelHelper:
         #logger.debug('KWARGS: %s' % kwargs)
         response = self.httptools.downloadpage(url, **kwargs)
 
-        if kwargs.get("canonical", {}).get("cf_challenges_list"):
-            for challenge in kwargs["canonical"]["cf_challenges_list"]:
-                if challenge in str(response.data):
+        self.set_preferred_proxy_ip(response, **kwargs)
+
+        if self.print_DEBUG and response.code not in self.httptools.SUCCESS_CODES + self.REDIRECTION_CODES:
+            try:
+                logger.error(("Host: %s" % response.host, "Url: %s" % response.url, "Proxy: %s" % response.proxy__, "Code: %s" % response.code))
+                logger.error(response.headers)
+                logger.error(response.json or response.soup or str(response.data))
+            except Exception:
+                pass
+
+        if kwargs.get("canonical", {}).get("ch_anubis", True) is not False:
+            challenge_regex = kwargs.get("canonical", {}).get("challenge_regex", [])
+            challenge_regex.extend(self.alfa_cached_passwords.get("cookies", {}).get("challenges", {})\
+                                                             .get("anubis", {}).get("challenge_regex", []))
+            for challenge, regex in challenge_regex:
+                if scrapertools.find_single_match(str(response.data), regex):
                     req = self.anubis_challenge(url, response, challenge, **kwargs)
                     response = self.httptools.downloadpage(url, **kwargs)
                     break
@@ -311,6 +350,16 @@ class AlfaChannelHelper:
 
         self.response = response
 
+        if kwargs.get('check_blocked_IP', False) or kwargs.get('canonical', {}).get('check_blocked_IP', False):
+            res, self.itemlist = check_blocked_IP(response.data, self.itemlist or kwargs.get('itemlist', []), 
+                                                  url, canonical=self.canonical, verbose=True)
+
+        self.ssl_version = self.httptools.ssl_version
+        self.ssl_context = self.httptools.ssl_context
+
+        return soup
+
+    def set_preferred_proxy_ip(self, response, **kwargs):
         self.alfa_domain_web_list = jsontools.load(window.getProperty("alfa_domain_web_list")) \
                                                    if window.getProperty("alfa_domain_web_list") else {}
         if not self.alfa_domain_web_list.get('croxyproxy.com'):
@@ -326,45 +375,64 @@ class AlfaChannelHelper:
                 kwargs['canonical']['preferred_proxy_ip'] = self.canonical['preferred_proxy_ip'] = self.response_preferred_proxy_ip
             if window: window.setProperty("AH_%s_preferred_proxy_ip" % self.channel, str(self.response_preferred_proxy_ip))
 
-        if kwargs.get('check_blocked_IP', False) or kwargs.get('canonical', {}).get('check_blocked_IP', False):
-            res, self.itemlist = check_blocked_IP(response.data, self.itemlist or kwargs.get('itemlist', []), 
-                                                  url, canonical=self.canonical, verbose=True)
-
-        self.ssl_version = self.httptools.ssl_version
-        self.ssl_context = self.httptools.ssl_context
-
-        return soup
-
     def anubis_challenge(self, url, response, challenge, **kwargs):
+
+        req = response
+        kwargs_inter = copy.deepcopy(self.alfa_cached_passwords.get("cookies", {})\
+                                         .get("challenges", {}).get("anubis", {}))
+        if self.channel in kwargs_inter.get('c_black_list', []):
+            return response
+        if kwargs_inter:
+            cf_debug = kwargs_inter.get('cf_debug', kwargs.get('canonical', {}).get('cf_debug', config.get_setting('debug_report', default=False)))
+            kwargs_inter.update(kwargs.get('canonical', {}))
+            kwargs_inter['cf_debug'] = cf_debug
+            if "canonical" not in kwargs: kwargs["canonical"] = self.canonical
+            kwargs['canonical'].update(kwargs_inter)
+        self.set_preferred_proxy_ip(response, **kwargs)
 
         try:
             from lib.unshortenit import bypass_anubis
 
-            kwargs_cha = {
-                'cf_debug': kwargs.get('canonical', {}).get('cf_debug', False),
-                'cf_assistant_ua': kwargs.get('canonical', {}).get('cf_assistant_ua', False),
-                'challenge_api': kwargs.get('canonical', {}).get('challenge_api', None),
-                'challenge_post': kwargs.get('canonical', {}).get('challenge_post', False),
-                'cookies_clear': kwargs.get('canonical', {}).get('cookies_clear', True),
-                'challenge': challenge, 
-            }
+            kwargs_cha = copy.deepcopy(kwargs.get('canonical', {}))
+            kwargs_cha['timeout'] = kwargs.get('timeout', 20)
+            kwargs_cha['post'] = kwargs.get('post', None)
+            kwargs_cha['challenge'] = challenge
+
             req = bypass_anubis(url, response, **kwargs_cha)
             if req and req.status_code in self.SUCCESS_CODES + self.REDIRECTION_CODES:
                 return req
         except Exception:
-            #logger.error(traceback.format_exc())
+            logger.error(traceback.format_exc())
             pass
 
-        import requests
-        from lib.cloudscraper import cf_assistant
+        if kwargs.get('canonical', {}).get('cf_assistant', True) is not False \
+                   and self.channel not in self.alfa_cached_passwords.get("cookies", {})\
+                           .get("challenges", {}).get("assistant", {}).get('c_black_list', []):
+            import requests
+            from lib.cloudscraper import cf_assistant
 
-        req = requests.Response()
-        req.status_code = 403
-        kwargs_cha = copy.deepcopy(kwargs)
-        kwargs_cha.update(kwargs.get("canonical", {}))
-        kwargs_cha["url"] = url
+            req = requests.Response()
+            req.status_code = 403
+            kwargs_inter = copy.deepcopy(self.alfa_cached_passwords.get("cookies", {})\
+                                             .get("challenges", {}).get("anubis", {}))
+            kwargs_cha = copy.deepcopy(kwargs)
+            if "canonical" not in kwargs: kwargs["canonical"] = self.canonical
+            kwargs_cha['url'] = url
+            kwargs_cha['cf_debug'] = kwargs.get('canonical', {}).get('cf_debug', config.get_setting('debug_report', default=False))
+            kwargs_cha['CF_testing'] = kwargs.get('canonical', {}).get('CF_testing', False)
+            kwargs_cha['clean_objects'] = kwargs.get('canonical', {}).get('clean_objects', False)
+            kwargs_cha['cf_assistant'] = kwargs_cha['canonical']['cf_assistant'] = kwargs_inter.get("cf_assistant", True)
+            kwargs_cha['cf_assistant_get_source'] = kwargs_cha['canonical']['cf_assistant_get_source'] = \
+                                                    kwargs_inter.get("cf_assistant_get_source", False)
+            kwargs_cha['cf_cookie'] = kwargs_cha['canonical']['cf_cookie'] = kwargs_inter.get("cf_cookie", "$HOST|browser-pow-auth")
+            kwargs_cha['cf_removeAllCookies'] = kwargs_cha['canonical']['cf_removeAllCookies'] = kwargs_inter.get("cf_removeAllCookies", False)
+            kwargs_cha['cf_cookies_names'] = kwargs_cha['canonical']['cf_cookies_names'] = \
+                                             kwargs_inter.get("cf_cookies_names", {"browser-pow-auth": False})
+            kwargs_cha['cf_challenges_list'] = kwargs_cha['canonical']['cf_challenges_list'] = \
+                                               kwargs_inter.get("cf_challenges_list", ["anubis_challenge"])
+            kwargs_cha['cf_jscode'] = kwargs_cha['canonical']['cf_jscode'] = kwargs_inter.get("cf_jscode", None)
 
-        req = cf_assistant.get_cl(kwargs_cha, req, cache=True, httptools_obj=self.httptools)
+            req = cf_assistant.get_cl(kwargs_cha, req, cache=True, httptools_obj=self.httptools)
 
         return req
 
@@ -4746,6 +4814,7 @@ class DooPlay(AlfaChannelHelper):
         self.season_colapse = True
         self.unescape = False
         self.alfa_domain_web_list = {}
+        self.alfa_cached_passwords = {}
         self.headers = {}
         self.unescape = False
         self.response_preferred_proxy_ip = ''

@@ -101,8 +101,8 @@ DEBUG_EXC = [
     "/api/stats",
 ]
 
-patron_host = "((?:http.*\:)?\/\/(?:.*ww[^\.]*)?\.?[\w|\-\d]+\.(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+))(?:\/|\?|$)"
-patron_domain = "(?:http.*\:)?\/\/(?:.*ww[^\.]*)?\.?([\w|\-\d]+\.(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+))(?:\/|\?|$)"
+patron_host = r"((?:http.*\:)?\/\/(?:.*ww[^\.]*)?\.?[\w|\-\d]+\.(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+))(?:\/|\?|$)"
+patron_domain = r"(?:http.*\:)?\/\/(?:.*ww[^\.]*)?\.?([\w|\-\d]+\.(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+\.?)?(?:[\w|\-\d]+))(?:\/|\?|$)"
 
 retry_alt_default = True
 
@@ -220,7 +220,7 @@ def get_cookie(url, name, follow_redirects=False):
 
 def get_url_headers(url, forced=False, dom=False):
     domain = urlparse.urlparse(url)[1]
-    sub_dom = scrapertools.find_single_match(domain, "\.(.*?\.\w+)")
+    sub_dom = scrapertools.find_single_match(domain, r"\.(.*?\.\w+)")
     if sub_dom and "google" not in url:
         domain = sub_dom
     if dom:
@@ -649,9 +649,10 @@ def proxy_post_processing(url, proxy_data, response, **opt):
                 url = opt["url_save"]
 
             elif ", Proxy Web" in proxy_data.get("stat", ""):
-                if channel_proxy_list(
+                if opt.get("CF_proxy_alt", True) and (channel_proxy_list(
                     opt["url_save"], forced_proxy=proxy_data["web_name"]
-                ) or channel_proxy_list(opt["url_save"], forced_proxy="ProxyCF"):
+                ) or channel_proxy_list(opt["url_save"], forced_proxy="ProxyCF")
+                ):
                     opt["forced_proxy"] = "ProxyCF"
                     url = opt["url_save"]
                     opt["post"] = opt["post_save"]
@@ -910,8 +911,8 @@ def canonical_check(url, response, req, **opt):
         return response
 
     patterns = [
-        'href="?([^"|\s*]+)["|\s*]\s*rel="?canonical"?',
-        'rel="?canonical"?\s*href="?([^"|>]+)["|>|\s*]',
+        r'href="?([^"|\s*]+)["|\s*]\s*rel="?canonical"?',
+        r'rel="?canonical"?\s*href="?([^"|>]+)["|>|\s*]',
     ]
     if canonical.get("pattern_forced", ""):
         if isinstance(canonical["pattern_forced"], list):
@@ -1335,6 +1336,8 @@ def downloadpage(url, **opt):
         opt["cf_cookie_send"] = opt["canonical"]["cf_cookie_send"]
     if "canonical_check" not in opt and "canonical_check" in opt.get("canonical", {}):
         opt["canonical_check"] = opt["canonical"]["canonical_check"]
+    if "CF_proxy_alt" not in opt and "CF_proxy_alt" in opt.get("canonical", {}):
+        opt["CF_proxy_alt"] = opt["canonical"]["CF_proxy_alt"]
 
     # Preparando la url
     if not PY3:
@@ -1835,8 +1838,8 @@ def downloadpage(url, **opt):
                     ] = opt["CF_if_assistant"] = True
                     if opt.get("canonical", {}):
                         opt["canonical"]["CF_stat"] = opt["CF"]
-                    opt["retries_cloudflare"] = 1
-                    opt["forced_proxy_ifnot_assistant"] = "ProxyCF"
+                    opt["retries_cloudflare"] = 1 if opt.get("CF_proxy_alt", True) else -1 
+                    opt["forced_proxy_ifnot_assistant"] = "ProxyCF" if opt.get("CF_proxy_alt", True) else None
                     opt["proxy_web"] = False
                     opt["proxy_addr_forced"] = None
                     opt["forced_proxy"] = None
@@ -2472,7 +2475,7 @@ def obtain_domain(url, sub=False, point=False, scheme=False):
 
     if url and len(url) > 1:
         url = urlparse.urlparse(url).netloc
-        ip = bool(scrapertools.find_single_match(url, "\d+\.\d+\.\d+\.\d+"))
+        ip = bool(scrapertools.find_single_match(url, r"\d+\.\d+\.\d+\.\d+"))
         if sub and not ip:
             split_lst = url.split(".")
             if len(split_lst) > 2:

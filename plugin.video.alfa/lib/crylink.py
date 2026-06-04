@@ -18,7 +18,7 @@ def crylink(b64decode, encode):
     """
     try:
         encrypt = base64.b64decode(b64decode)
-        _len = encode.encode("utf-8")
+        _len = encode.encode("utf-8") if not isinstance(encode, bytes) else encode
         if len(_len) not in (16, 24, 32): _len = (_len + b"\x00" * 32)[:32]
         return _pkcs7_unpad(AES.new(_len, AES.MODE_CBC, encrypt[:16]).decrypt(encrypt[16:]), AES.block_size).decode('utf-8')
     except Exception: return None
