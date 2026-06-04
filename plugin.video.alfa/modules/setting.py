@@ -1207,7 +1207,7 @@ def icon_set_selector(item=None):
     patron += 'data-target="react-app\.embeddedData">(.+?)</script>'
     data = re.compile(patron, re.DOTALL).findall(data)[0]
     data = json.loads(data)
-    matches = [x["name"] for x in data["payload"]["tree"]["items"]]
+    matches = [x["name"] for x in data["payload"]["codeViewTreeRoute"]["tree"]["items"]]
 
     default = Item(
         plot="El tema por defecto de Alfa",
