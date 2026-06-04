@@ -4,6 +4,7 @@
 # -*- By the Alfa Develop Group -*-
 import sys
 import base64
+import re
 
 from core import tmdb
 from core import httptools
@@ -16,7 +17,6 @@ from platformcode import config, logger
 from modules import filtertools
 from modules import autoplay
 from bs4 import BeautifulSoup
-
 
 IDIOMAS = {'2': 'VOSE', "0": "LAT", "1": "CAST", "JAP": "JA"}
 
@@ -53,24 +53,24 @@ def mainlist(item):
     
     itemlist.append(Item(channel=item.channel, title='Todas', action='list_all', url=host + "peliculas",
                          thumbnail=get_thumb('movies', auto=True), type="peliculas"))
-    itemlist.append(Item(channel=item.channel, title='Por Género', action='genres', url=host,
-                         thumbnail=get_thumb('movies', auto=True), type="peliculas"))
-    itemlist.append(Item(channel=item.channel, title='Año', action='genres', url=host,
-                         thumbnail=get_thumb('movies', auto=True), type="peliculas"))
+    # itemlist.append(Item(channel=item.channel, title='Por Género', action='genres', url=host,
+                         # thumbnail=get_thumb('movies', auto=True), type="peliculas"))
+    # itemlist.append(Item(channel=item.channel, title='Año', action='genres', url=host,
+                         # thumbnail=get_thumb('movies', auto=True), type="peliculas"))
     itemlist.append(Item(channel=item.channel, title='Series', url=host + 'series', action='list_all',
                          thumbnail=get_thumb('tvshows', auto=True), type="series"))
-    itemlist.append(Item(channel=item.channel, title='Por Género', action='genres', url=host,
-                         thumbnail=get_thumb('tvshows', auto=True), type="series"))
-    itemlist.append(Item(channel=item.channel, title='Año', action='genres', url=host,
-                         thumbnail=get_thumb('tvshows', auto=True), type="series"))
+    # itemlist.append(Item(channel=item.channel, title='Por Género', action='genres', url=host,
+                         # thumbnail=get_thumb('tvshows', auto=True), type="series"))
+    # itemlist.append(Item(channel=item.channel, title='Año', action='genres', url=host,
+                         # thumbnail=get_thumb('tvshows', auto=True), type="series"))
     itemlist.append(Item(channel=item.channel, title='Anime', url=host + 'animes', action='list_all',
-                         thumbnail=get_thumb('anime', auto=True), type="animes"))
-    itemlist.append(Item(channel=item.channel, title='Por Género', action='genres', url=host,
-                         thumbnail=get_thumb('anime', auto=True), type="animes"))
-    itemlist.append(Item(channel=item.channel, title='Año', action='genres', url=host,
                          thumbnail=get_thumb('anime', auto=True), type="animes"))
     itemlist.append(Item(channel=item.channel, title='Dorama', url=host + 'generos/dorama', action='list_all',
                          thumbnail=get_thumb('anime', auto=True), type="animes"))
+    itemlist.append(Item(channel=item.channel, title='Por Género', action='genres', url=host,
+                         thumbnail=get_thumb('genres', auto=True)))
+    itemlist.append(Item(channel=item.channel, title='Año', action='genres', url=host,
+                         thumbnail=get_thumb('year', auto=True)))
     itemlist.append(Item(channel=item.channel, title="Buscar...", action="search",
                          thumbnail=get_thumb("search", auto=True)))
     
@@ -87,11 +87,11 @@ def genres(item):
     existe = []
     data = httptools.downloadpage(item.url).data
     if 'Por Género' in item.title:
-        matches = scrapertools.find_multiple_matches(data, '(?is)href="/(genero[^"]+)">([^<]+)')
+        matches = scrapertools.find_multiple_matches(data, '(?is)href="/(genero[^"]+)"[^>]+>([^<]+)')
     else:
-        matches = scrapertools.find_multiple_matches(data, '(?is)href="/(year[^"]+)">(\d+)<')
+        matches = scrapertools.find_multiple_matches(data, '(?is)href="/(year[^"]+)"[^>]+>(\d+)<')
     for url, title in matches:
-        url += "/%s" %item.type
+        # url += "/%s" %item.type
         if title in existe:
             continue
         existe.append(title)
@@ -117,16 +117,18 @@ def list_all(item):
     itemlist = list()
     year = ""
     soup = create_soup(item.url)
-    matches = soup.find_all("a", class_="poster-card")
+    matches = soup.find_all("a", class_="card__link")
     for elem in matches:
         url = elem['href']
-        # title = elem['title']
-        title = elem.h3.text
+        title = elem.h2.text
         thumbnail = elem.img['src']
-        year = scrapertools.find_single_match(title, ' \((\d+)\)')
-        title = scrapertools.find_single_match(title, '(.*?) \(\d+\)')
-        if year == '':
+        year = elem.find('span', class_='card__badge--year')
+        if year:
+            year = year.text.strip()
+        else:
             year = '-'
+        url = urlparse.urljoin(item.url,url)
+        
         new_item = Item(channel=item.channel, title=title, url=url, thumbnail=thumbnail, infoLabels={"year": year})
         if "/serie/" in url or "/anime/" in url:
             new_item.contentSerieName = title
@@ -139,7 +141,7 @@ def list_all(item):
     
     tmdb.set_infoLabels_itemlist(itemlist, True)
     
-    next_page = soup.find('a', rel='next')
+    next_page = soup.find(attrs={"aria-label": re.compile(r"^(?:Next|Siguiente)")})
     if next_page:
         next_page = next_page['href']
         next_page = urlparse.urljoin(item.url,next_page)
@@ -151,7 +153,7 @@ def seasons(item):
     logger.info()
     itemlist = list()
     soup = create_soup(item.url)
-    matches = soup.find('ul', id='season-tabs').find_all('li')
+    matches = soup.find('select', id='temporadas_select').find_all('option')
     infoLabels = item.infoLabels
     for elem in matches:
         season = scrapertools.find_single_match(elem.text, '\d+')
@@ -197,6 +199,7 @@ def episodesxseasons(item):
         epi_num = scrapertools.find_single_match(url, "/capitulo/(\d+)")
         infoLabels["episode"] = epi_num
         title = "%sx%s" % (season, epi_num)
+        url = urlparse.urljoin(item.url,url)
         itemlist.append(Item(channel=item.channel, title=title, url=url, action='findvideos',
                              infoLabels=infoLabels))
     
@@ -206,21 +209,24 @@ def episodesxseasons(item):
 
 
 def findvideos(item):
+    import ast
+    from lib.unshortenit import bypass_embed69
+    
     logger.info()
     itemlist = list()
     
-    data = httptools.downloadpage(item.url).data
-    url = scrapertools.find_single_match(data, "videoSources\s*=\s*\[\s*'([^']+)")
+    soup = create_soup(item.url)
+    url = soup.iframe.get('src', '')
+    url = urlparse.urljoin(item.url,url)
     
     data = httptools.downloadpage(url).data
     soup = BeautifulSoup(data, "html5lib", from_encoding="utf-8")
     
-    if "embed69" in url and "No folders found" not in data:
-        import ast
+    if ("embed69" in url and "No folders found" not in data) or "vidurl" in url:
         
-        clave = scrapertools.find_single_match(data, r"decryptLink\(server.link, '(.+?)'\),")
+        clave, data = bypass_embed69(data)
+        
         dataLinkString = scrapertools.find_single_match(data, r"dataLink\s*=\s*([^;]+)")
-        
         dataLinkString = dataLinkString.replace(r"\/", "/")
         dataLink = ast.literal_eval(dataLinkString)
         
@@ -230,10 +236,7 @@ def findvideos(item):
             for elem in langSection['sortedEmbeds']:
                 if elem['servername'] != "download":
                     vid = elem['link']
-                    if clave:
-                        from lib.crylink import crylink
-                        vid = crylink(vid, clave)
-                    else:
+                    if not clave:
                         vid = scrapertools.find_single_match(vid, '\.(eyJs.*?)\.')
                         vid += "="
                         vid = base64.b64decode(vid).decode()
@@ -324,5 +327,5 @@ def newest(categoria):
         for line in sys.exc_info():
             logger.error("{0}".format(line))
         return []
-
+    
     return itemlist
