@@ -40,6 +40,7 @@ isAlfaAssistantOpen = False
 window = None
 timer1 = 30
 timer2 = 5
+android_15 = False
 
 
 def check_assistant_servers(time1=timer1, time2=timer2):
@@ -1110,7 +1111,7 @@ def open_alfa_assistant(
     if ASSISTANT_SERVERS_AGE < time.time():
         check_assistant_servers(time1=timer1, time2=timer2)
 
-    if not isAlfaAssistantOpen:
+    if not isAlfaAssistantOpen or android_15:
         try:
             if ASSISTANT_MODE == "este":
                 if not is_alfa_installed():
@@ -1126,9 +1127,13 @@ def open_alfa_assistant(
                     force=True,
                 )
 
-                ver_upd = get_generic_call(
-                    "ping", timeout=2 - EXTRA_TIMEOUT, alfa_s=True, retry=False
-                )
+                if not android_15:
+                    ver_upd = get_generic_call(
+                        "ping", timeout=2 - EXTRA_TIMEOUT, alfa_s=True, retry=False
+                    )
+                else:
+                    ver_upd = None
+
                 if closeAfter:
                     cmd = "openAndQuit"
                 else:
@@ -2079,6 +2084,8 @@ def binary_stat(p, action, retry=False, init=False, app_response={}):
 ## Instala o actualiza la app de Assitant ##################################################################################################################################
 #
 def install_alfa_assistant(update=False, remote="", verbose=VERBOSE):
+    global android_15
+
     if PLATFORM not in ["android", "atv2"] and ASSISTANT_MODE == "este":
         return install_alfa_desktop_assistant(
             update=update, remote=remote, verbose=verbose

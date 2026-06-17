@@ -13,8 +13,6 @@ from AlfaChannelHelper import DictionaryAllChannel
 from AlfaChannelHelper import re, traceback, time, base64, xbmcgui
 from AlfaChannelHelper import Item, servertools, scrapertools, jsontools, get_thumb, config, logger, filtertools, autoplay, renumbertools
 
-from lib.alfa_assistant import is_alfa_installed
-
 IDIOMAS = AlfaChannelHelper.IDIOMAS_T
 list_language = list(set(IDIOMAS.values()))
 list_quality_movies = []
@@ -22,7 +20,7 @@ list_quality_tvshow = AlfaChannelHelper.LIST_QUALITY_TVSHOW
 list_quality = list_quality_movies + list_quality_tvshow
 list_servers = AlfaChannelHelper.LIST_SERVERS_T
 
-cf_assistant = True if is_alfa_installed() else False
+cf_assistant = True if AlfaChannelHelper.IS_ASSISTANT_INSTALLED else False
 forced_proxy_opt = None if cf_assistant else 'ProxyCF'
 debug = config.get_setting('debug_report', default=False)
 
@@ -32,15 +30,10 @@ canonical = {
              'host_alt': ["https://eztvx.to/"], 
              'host_black_list': ["https://eztv.li/", "https://eztv.re/"], 
              'pattern': '<div\s*id="header_logo">\s*<a\s*href="([^"]+)"', 
-             'set_tls': True, 'set_tls_min': True, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 'cf_assistant': cf_assistant, 
-             'cf_assistant_ua': True, 'cf_assistant_get_source': True if cf_assistant == 'force' else False, 
-             'cf_no_blacklist': True, 'cf_removeAllCookies': False if cf_assistant == 'force' else True,
-             'cf_challenge': 1, 'cf_returnkey': 'url', 'cf_partial': True, 'cf_debug': debug, 
-             'cf_cookie': '$HOST|cf_clearance' if cf_assistant is True else None, 'cf_jscode': None, 
-             'cf_cookies_names': {'cf_clearance': False if cf_assistant is True else True},
-             'CF_if_assistant': True if cf_assistant is True else False, 'retries_cloudflare': -1, 
-             'CF_stat': True if cf_assistant is True else False, 
-             'CF': False, 'CF_test': True, 'alfa_s': True, 'renumbertools': False
+             'set_tls': True, 'set_tls_min': True, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
+             'retries_cloudflare': -1 if cf_assistant else 1, 
+             'CF': False, 'CF_test': True, 'alfa_s': True, 'renumbertools': False, 
+             'data_js': ''
             }
 host = canonical['host'] or canonical['host_alt'][0]
 host_torrent = 'https://zoink.ch/'
@@ -51,7 +44,6 @@ min_temp = modo_ultima_temp if not modo_ultima_temp else 'continue'
 
 timeout = (5, (config.get_setting('timeout_downloadpage', channel) * 2))
 kwargs = {}
-debug = config.get_setting('debug_report', default=False)
 movie_path = "/peliculas/"
 tv_path = '/shows'
 language = ['VO']

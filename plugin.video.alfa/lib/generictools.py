@@ -151,7 +151,7 @@ def convert_url_base64(url, host='', referer=None, rep_blanks=True, force_host=F
                 else:
                     url_base64_bis = sortened_urls(url, url_base64, host, referer=referer, alfa_s=True, item=item)
                 host_name = scrapertools.find_single_match(url_base64_bis, patron_host)
-                if host_name:
+                if host_name and not 'magnet' in url_base64_bis:
                     url_base64_bis = host_name + url_base64_bis.replace(host_name, '').replace('//', '/')
                 else:
                     url_base64_bis = url_base64_bis.replace('//', '/')

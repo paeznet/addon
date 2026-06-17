@@ -105,10 +105,12 @@ def get_cl(
             **kwargs
         )
 
+    extraPostDelay = opt.get("canonical", {}).get("cf_extraPostDelay", extraPostDelay)
     if timeout > 3 and timeout < 15:
         timeout = 20
     if timeout + extraPostDelay > 35:
         timeout = 20
+    timeout = opt.get("canonical", {}).get("cf_timeout", timeout)
 
     blacklist_clear = True
     ua_headers = False
@@ -131,8 +133,8 @@ def get_cl(
         removeAllCookies = opt["cf_removeAllCookies"]
     if not elapsed:
         elapsed = time.time()
-    debug = debug or opt.get("cf_debug", False)
-    if debug or CF_testing or opt.get("CF_testing", False):
+    debug = opt.get("cf_debug", False) or debug
+    if debug or opt.get("CF_testing", False) or CF_testing :
         alfa_s = False
     cleanObjects = opt.get("clean_objects", False)
     if "cf_cookie" not in opt:
@@ -306,7 +308,7 @@ def get_cl(
                         if value is True:
                             jscode = get_jscode(1, key, 1, url=url, headers=headers_str, 
                                                 postData=post_str, Cookies_send=Cookies_send)
-                            timeout = opt.get("js_time") or (timeout if timeout > 1 else 5)
+                            timeout = opt.get("js_time") or opt.get('canonical', {}).get("js_time") or (timeout if timeout > 1 else 5)
                             break
                         if not value:
                             continue
@@ -388,7 +390,7 @@ def get_cl(
                     challenge_url = ''
                     if found_url:
                         break
-                    for challenge in opt.get("cf_challenges_list", cf_challenges_list):
+                    for challenge in opt.get("cf_challenges_list", []) + cf_challenges_list:
                         if urlparse.urlparse(challenge).netloc in urlparse.urlparse(urlsVisited.get("url", "")).netloc:
                             challenge_url = get_value_by_url(
                                 data_assistant['urlsVisited'], 
@@ -680,7 +682,7 @@ def get_source(
     encoding = opt.get("encoding", "UTF-8") or "UTF-8"
     if "cf_removeAllCookies" in opt and removeAllCookies is not False:
         removeAllCookies = opt["cf_removeAllCookies"]
-    debug = debug or opt.get("cf_debug", False)
+    debug = opt.get("cf_debug", False) or debug
     cleanObjects = opt.get("clean_objects", True)
     if debug:
         alfa_s = False
@@ -830,7 +832,7 @@ def get_source(
                     url_domain_list = ["javascript:jscode"]
                     url = "about:blank"
                 extraPostDelay += 2
-                timeout = opt.get("js_time") or (timeout if timeout > 1 else 5)
+                timeout = opt.get("js_time") or opt.get('canonical', {}).get("js_time") or (timeout if timeout > 1 else 5)
 
             try:
                 vers = int(scrapertools.find_single_match(ua, r"Android\s*(\d+)"))
@@ -936,7 +938,7 @@ def get_source(
                     challenge_url = ''
                     if found_url:
                         break
-                    for challenge in opt.get("cf_challenges_list", cf_challenges_list):
+                    for challenge in opt.get("cf_challenges_list", []) + cf_challenges_list:
                         if urlparse.urlparse(challenge).netloc in urlparse.urlparse(urlsVisited.get("url", "")).netloc:
                             challenge_url = get_value_by_url(
                                 data_assistant['urlsVisited'], 
@@ -1286,11 +1288,12 @@ def find_cookie_params(cookie, domain, domain_full, opt, clear=False, write=True
         for cookie_part in cookieslist.split(";"):
             try:
                 name, val = scrapertools.find_single_match(
-                    cookie_part, "^([^=]+)=([^$]+)$"
+                    cookie_part, "^([^=]+)=([^¿]+)"
                 )
                 if name.strip() == "domain":
                     continue
             except Exception:
+                logger.error("cookie_part: %s, Error: %s" % (cookie_part, traceback.format_exc()))
                 continue
 
             cf_cookies_names[name.strip()] = val.strip()
