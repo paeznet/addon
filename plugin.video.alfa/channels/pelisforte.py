@@ -35,7 +35,8 @@ host = canonical['host'] or canonical['host_alt'][0]
 
 IDIOMAS = {'Subtitulado': 'VOSE', 'Latino': 'LAT', 'Castellano': 'CAST'}
 SERVER = {'swish': 'Streamwish', 'vgfplay': 'Vidguard', 'playpf': 'Tiwikiwi',
-          'filemoon': 'Filemoon', 'okhd': 'Okhd', 'bf0skv': 'Filemoon'}
+          'filemoon': 'Filemoon', 'okhd': 'Okhd', 'bf0skv': 'Filemoon',
+          'byse': 'Filemoon', 'w1tv': 'Kinoger'}
 
 list_language = list(IDIOMAS.values())
 list_servers = list(SERVER.values())
@@ -175,6 +176,8 @@ def findvideos(item):
     soup = create_soup(item.url).find('section', class_='player')
     matches = soup.find_all("iframe")
     servers = soup.find_all("span", class_="server")
+    logger.debug(matches)
+    logger.debug(servers)
     for elem, serv in zip(matches, servers):
         url = elem['data-src']
         url = url.replace("?h=", "r.php?h=")
@@ -213,8 +216,11 @@ def findvideos(item):
 def play(item):
     logger.info()
     itemlist = []
+    
     url = httptools.downloadpage(item.url).url
-    if "vgfplay" not in url and "listeamed" not in url and "bf0skv" not in url:
+    
+    # if "vgfplay" not in url and "listeamed" not in url and "bf0skv" not in url:
+    if "okhd" in url:
         url += "|Referer=%s" %item.url
     itemlist.append(Item(channel=item.channel, action="play", title= "%s", contentTitle = item.contentTitle, url=url))
     itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())

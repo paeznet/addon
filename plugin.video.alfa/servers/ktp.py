@@ -94,7 +94,11 @@ def get_video_url(page_url, premium=False, user="", password="", video_password=
     
     if not url:
         url = scrapertools.find_single_match(data, '(?:video_url|video_alt_url|video_alt_url[0-9]*):\s*(?:\'|")([^\,]+)(?:\'|").*?')
-        url += "|Referer=%s" % host
+        if "allclassic.porn" in url:
+            url = httptools.downloadpage(url, follow_redirects=False, only_headers=True, **kwargs).headers.get("location", "")
+        if not "allclassic.porn" in url:
+            url += "|Referer=%s" % host
+        
         video_urls.append(['[ktplayer]', url])
     return video_urls
 
