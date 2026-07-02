@@ -37,9 +37,10 @@ def test_video_exists(page_url):
     
     response = httptools.downloadpage(revolver.wishmeluck(page_url), **kwargs)
     data = response.data
-    if response.code == 404 or "no longer available" in data or "Not Found" in data: 
+    if response.code == 404: 
         response = httptools.downloadpage(revolver.wishmeluck(page_url), **kwargs)
-        # return False, "[streamwish] El archivo no existe o ha sido borrado"
+    if "no longer available" in data or "Not Found" in data: 
+        return False, "[streamwish] El archivo no existe o ha sido borrado"
     if "restricted for this domain" in data:
         return False, "[streamwish] El archivo esta restringido en tu pais"
     return True, ""

@@ -25,8 +25,8 @@ forced_proxy_opt = 'ProxySSL'
 canonical = {
              'channel': 'pelisforte', 
              'host': config.get_setting("current_host", 'pelisforte', default=''), 
-             'host_alt': ["https://www1.pelisforte.se/"], 
-             'host_black_list': ["https://pelisforte.co/"], 
+             'host_alt': ["https://www2.pelisforte.se/"], 
+             'host_black_list': ["https://www1.pelisforte.se/", "https://pelisforte.co/"], 
              'set_tls': True, 'set_tls_min': True, 'retries_cloudflare': 1, 'forced_proxy_ifnot_assistant': forced_proxy_opt, 
              'CF': False, 'CF_test': False, 'alfa_s': True
             }
@@ -67,16 +67,16 @@ def mainlist(item):
                          url=host + "pelis/idiomas/subtituladas-p02", extra = "VOSE",
                          thumbnail=get_thumb("vose", auto=True)))
 
-    itemlist.append(Item(channel=item.channel, title="Sagas", action="section", url=host + "portal002",
+    # itemlist.append(Item(channel=item.channel, title="Sagas", action="section", url=host + "pelicula",
+                         # thumbnail=get_thumb("genres", auto=True)))
+
+    itemlist.append(Item(channel=item.channel, title="Generos", action="section", url=host + "pelicula",
                          thumbnail=get_thumb("genres", auto=True)))
 
-    itemlist.append(Item(channel=item.channel, title="Generos", action="section", url=host + "portal002",
-                         thumbnail=get_thumb("genres", auto=True)))
-
-    itemlist.append(Item(channel=item.channel, title="Alfabetico", action="alphabet", url=host + "portal002",
+    itemlist.append(Item(channel=item.channel, title="Alfabetico", action="alphabet", url=host + "pelicula",
                          thumbnail=get_thumb('year', auto=True)))
 
-    itemlist.append(Item(channel=item.channel, title="Años", action="alphabet", url=host + "portal002",
+    itemlist.append(Item(channel=item.channel, title="Años", action="alphabet", url=host + "pelicula",
                          thumbnail=get_thumb('year', auto=True)))
 
     itemlist.append(Item(channel=item.channel, title="Buscar...", action="search", url=host + '?s=',
@@ -135,7 +135,6 @@ def list_all(item):
     return itemlist
 
 
-
 def section(item):
     logger.info()
     itemlist = []
@@ -176,8 +175,7 @@ def findvideos(item):
     soup = create_soup(item.url).find('section', class_='player')
     matches = soup.find_all("iframe")
     servers = soup.find_all("span", class_="server")
-    logger.debug(matches)
-    logger.debug(servers)
+    
     for elem, serv in zip(matches, servers):
         url = elem['data-src']
         url = url.replace("?h=", "r.php?h=")
