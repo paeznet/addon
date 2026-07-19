@@ -169,6 +169,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
             elem_json['thumbnail'] = elem.img.get('data-original', '') \
                                      or elem.img.get('data-mediumthumb', '') \
                                      or elem.img.get('src', '')
+            elem_json['thumbnail'] += "|Referer=%s" %host
             elem_json['stime'] = elem.find(class_='duration').get_text(strip=True) if elem.find(class_='duration') else ''
             if elem.find('span', class_='views'):
                 elem_json['views'] = elem.find('span', class_='views').get_text(strip=True)
