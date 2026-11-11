@@ -22,7 +22,7 @@ def test_video_exists(page_url):
     post_url= "https://api.bitchute.com/api/beta/video/media"
     id = page_url.split("embed/")[-1]
     post = {"video_id": id}
-    data = httptools.downloadpage(post_url, post=json.dumps(post), headers=headers).json
+    data = httptools.downloadpage(post_url, post=json.dumps(post)).json
     logger.debug(data)
     
     return True, ""
