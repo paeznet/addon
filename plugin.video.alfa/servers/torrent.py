@@ -107,7 +107,7 @@ patron_domain = r'(?:http.*\:)?\/\/(?:.*ww[^\.]*)?\.?(?:[^\.]+\.)?([\w|\-]+\.\w+
 patron_host = r'((?:http.*\:)?\/\/(?:.*ww[^\.]*)?\.?(?:[^\.]+\.)?[\w|\-]+\.\w+)(?:\/|\?|$)'
 patron_canal = r'(?:http.*\:)?\/\/(?:ww[^\.]*)?\.?(\w+)\.\w+(?:\/|\?|$)'
 
-domain_CF_blacklist = ['atomohd', 'atomixhq', 'atomtt', 'wolfmax4k', 'Wolfmax4k', 'enlacito']    ############# TEMPORAL
+domain_CF_blacklist = ['atomohd', 'atomixhq', 'atomtt', 'wolfmax4k', 'Wolfmax4k', 'enlacito', 'wolftorrent']    ############# TEMPORAL
 
 torrent_paths = {}
 
@@ -353,7 +353,7 @@ def caching_torrents(url, torrent_params={}, retry=False, **kwargs):
                     if not torrent_params.get('lookup', False) and cf_error:
                         torrent_params['torrents_path'] = ''
                         url_call = url
-                        if url_domain in domain_CF_blacklist and item.url_tvshow:
+                        if url_domain in domain_CF_blacklist and item.url_tvshow and item.contentType != 'movie':
                             url_call = item.url_tvshow
                             if item.contentType == 'episode' and item.url_save_rec and item.url_save_rec[0]:
                                 url_call = item.url_save_rec[0]
@@ -402,7 +402,7 @@ def caching_torrents(url, torrent_params={}, retry=False, **kwargs):
         if torrent_file.startswith(PK) or torrent_file.startswith(RAR):
             if torrent_file.startswith(PK): arch_ext = 'zip'
             if torrent_file.startswith(RAR): arch_ext = 'rar'
-            subtitle_path = config.get_kodi_setting("subtitles.custompath")
+            subtitle_path = config.get_subtitles_path()
             logger.info('Es un archivo .%s: %s' % (arch_ext.upper(), url))
             
             torrents_path_zip = filetools.join(videolibrary_path, 'temp_torrents_arch', \
@@ -443,9 +443,12 @@ def caching_torrents(url, torrent_params={}, retry=False, **kwargs):
                         input_file = filetools.join(root, file)                 # Ruta al archivo
                         if file.endswith(".srt") and not torrent_params.get('lookup', False):           # Archivo de subtítulos.  Lo copiamos
                             res = filetools.copy(input_file, filetools.join(filetools.dirname(torrents_path_encode), file), silent=True)
-                            if res: torrent_params['subtitles_list'] += [filetools.join(filetools.dirname(torrents_path_encode), file)]
-                            if subtitle_path:
-                                filetools.copy(input_file, filetools.join(subtitle_path, file), silent=True)
+                            saved_subtitle = filetools.join(filetools.dirname(torrents_path_encode), file) if res else ''
+                            temp_subtitle = filetools.join(subtitle_path, file)
+                            if filetools.copy(input_file, temp_subtitle, silent=True):
+                                saved_subtitle = temp_subtitle
+                            if saved_subtitle:
+                                torrent_params['subtitles_list'] += [saved_subtitle]
                         
                         elif file.endswith(".torrent"):
                             torrent_file = filetools.read(input_file, mode='rb', vfs=VFS)               # Leemos el .torrent
@@ -750,8 +753,9 @@ def magnet2torrent(magnet, headers={}, downloadStatus=4):
 
         # Tratamos de convertir el magnet on-line (opción más rápida, pero no se puede convertir más de un magnet a la vez)
         url_list = [
-                    ('https://itorrents.net/torrent/', 5, '', '.torrent')
+                    ('https://itorrents.net/torrent/', 5, '', '.torrent')       # El servicio está corrompido y descaga un virus
                    ]                                                            # Lista de servicios on-line testeados
+        url_list = []
         for x, (url, timeout, id, sufix) in enumerate(url_list):
             if progreso: progreso.update(old_div((x * 100), len(url_list)), header_progreso, magnet_title)
             if id:

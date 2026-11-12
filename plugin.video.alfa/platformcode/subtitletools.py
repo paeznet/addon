@@ -307,7 +307,7 @@ def get_from_subdivx(sub_url, sub_data=None, sub_dir='', item=Item(), sub_url_al
         sub_url_alt = httptools.obtain_domain(sub_url, scheme=True).rstrip('/') + '/descargar.php?id='
         sub_url_alt += scrapertools.find_single_match(sub_url, r'\/(\d+)$')
     if not sub_dir:
-        sub_dir = filetools.join(config.get_videolibrary_path(), "subtitles")
+        sub_dir = config.get_subtitles_path()
         filetools.mkdir(sub_dir)
 
     if not sub_data:
@@ -352,7 +352,7 @@ def get_from_subscene(sub_url, sub_data=None, sub_dir='', item=Item()):
         sub = False
         host = httptools.obtain_domain(sub_url, scheme=True)
         if not sub_dir:
-            sub_dir = filetools.join(config.get_videolibrary_path(), "subtitles")
+            sub_dir = config.get_subtitles_path()
         # sub_dir_init = sub_dir
         sub_dir = filetools.join(sub_dir, sub_url.split('/')[-1])
         filetools.mkdir(sub_dir)
@@ -464,7 +464,7 @@ def get_from_subdl(sub_url, sub_data=None, sub_dir='', item=Item()):
     sub_url_alt = 'https://dl.%s/subtitle/' % httptools.obtain_domain(sub_url, scheme=False).rstrip('/')
     sub_url = sub_url.replace("&amp;", "&")
     if not sub_dir:
-        sub_dir = filetools.join(config.get_videolibrary_path(), "subtitles")
+        sub_dir = config.get_subtitles_path()
         filetools.mkdir(sub_dir)
 
     if not sub_data:
@@ -584,71 +584,6 @@ def _mejor_subtitulo(resultados, item, numero, temporada=0, episodio=0):
     return mejor
 
 
-def _nombres_subtitulo(sub):
-    """Los nombres de fichero de un subtitulo, que puede venir como ruta o como lista de rutas."""
-    if not sub:
-        return []
-
-    if not isinstance(sub, (list, tuple)):
-        sub = [sub]
-
-    return [filetools.basename(str(x)) for x in sub if x and not str(x).startswith('http')]
-
-
-def _limpia_subtitulos(sub_dir, conservar=()):
-    """Borra los subtitulos de la carpeta que NO sean los que se acaban de guardar.
-
-    Alfa tiene CUATRO implementaciones de subtitulos (subdivx, subscene, subdl y opensubtitles) y
-    las cuatro guardan en la misma carpeta. Ninguna borraba nada, asi que se acumulaban para
-    siempre (64-138 KB cada uno). Aqui esta la unica limpieza que hay.
-
-    `conservar` son los NOMBRES que hay que salvar, no "los mas nuevos": un zip puede traer fechas
-    antiguas y entonces se borraria justo el que se acaba de descargar. Con cada subtitulo que se
-    va, se va tambien su .nfo: el flujo de la videoteca los escribe emparejados en el tiempo, asi
-    que se localizan por fecha, con un margen de 5 s.
-
-    Si algo falla se sigue: una limpieza no puede romper una reproduccion.
-    """
-    try:
-        if not sub_dir or not filetools.exists(sub_dir):
-            return
-
-        guardar = [str(n) for n in (conservar or [])]
-        fechas = []
-
-        for nombre in (filetools.listdir(sub_dir, silent=True) or []):
-            base = str(nombre)
-            if not base.lower().endswith(('.srt', '.ass', '.ssa', '.sub')):
-                continue
-            if base in guardar:
-                continue
-            ruta = filetools.join(sub_dir, base)
-            try:
-                fechas.append(os.path.getmtime(filetools.translatePath(ruta)))
-            except Exception:
-                pass
-            filetools.remove(ruta, silent=True)
-            logger.info("subtitulos: borrado el antiguo %s" % base)
-
-        if not fechas:
-            return
-
-        for nombre in (filetools.listdir(sub_dir, silent=True) or []):
-            base = str(nombre)
-            if not base.lower().endswith('.nfo'):
-                continue
-            ruta = filetools.join(sub_dir, base)
-            try:
-                when = os.path.getmtime(filetools.translatePath(ruta))
-                if any(abs(when - f) <= 5 for f in fechas):
-                    filetools.remove(ruta, silent=True)
-                    logger.info("subtitulos: borrado el .nfo %s" % base)
-            except Exception:
-                pass
-    except Exception as e:
-        logger.error("subtitulos: no se pudo limpiar la carpeta (%s)" % str(e)[:100])
-
-
 def get_from_opensubtitles(imdb_id, temporada=0, episodio=0, sub_dir='', item=Item()):
     """Subtitulo en espanol de opensubtitles, para una pelicula o para un episodio de serie.
 
@@ -698,12 +633,6 @@ def get_from_opensubtitles(imdb_id, temporada=0, episodio=0, sub_dir='', item=It
                     % (imdb_id, temporada, episodio))
         return sub
 
-    if not sub_dir:
-        sub_dir = filetools.join(config.get_videolibrary_path(), "subtitles")
-
-    if not filetools.exists(sub_dir):
-        filetools.mkdir(sub_dir)
-
     elegido = _mejor_subtitulo(resultados, item, numero, temporada, episodio)
 
     if not elegido:
@@ -716,6 +645,11 @@ def get_from_opensubtitles(imdb_id, temporada=0, episodio=0, sub_dir='', item=It
     if not sub_name or not zip_url:
         return sub
 
+    if not sub_dir:
+        sub_dir = config.get_subtitles_path()
+    if not filetools.exists(sub_dir):
+        filetools.mkdir(sub_dir)
+    sub_name = filetools.basename(sub_name)
     sub = filetools.join(sub_dir, sub_name)
 
     # ya descargado en una busqueda anterior: no se vuelve a pedir (esto es lo que evita duplicar)
@@ -759,10 +693,6 @@ def get_from_opensubtitles(imdb_id, temporada=0, episodio=0, sub_dir='', item=It
             pass
 
     logger.info("opensubtitles: subtitulo listo (%s)" % sub_name)
-
-    # No se guarda cache (volver a pedirlo cuesta ~1 s): se queda este y se van los demas. La MISMA
-    # limpieza la usa download_subtitles para las otras tres fuentes de subtitulos de Alfa.
-    _limpia_subtitulos(sub_dir, [sub_name])
 
     return sub
 
@@ -812,10 +742,6 @@ def download_subtitles(item):
     subtitles_path = ''
 
     try:
-        subtitles_path = config.get_kodi_setting('subtitles.custompath')
-        if not subtitles_path:
-            subtitles_path = filetools.join(config.get_videolibrary_path(), "subtitles")
-            filetools.mkdir(subtitles_path)
 
         for x, subtitle in enumerate(subtitles):
             data_dl = ''
@@ -824,7 +750,10 @@ def download_subtitles(item):
                     item.subtitle = subtitle
                 continue
 
-            subtitle_path_name = filetools.join(subtitles_path, subtitle.split('/')[-1])
+            if not subtitles_path:
+                subtitles_path = config.get_subtitles_path()
+            filename = filetools.basename(urlparse.urlparse(subtitle).path) or 'subtitle.srt'
+            subtitle_path_name = filetools.join(subtitles_path, filename)
 
             for service, funtion in subtitle_services:
                 if service in httptools.obtain_domain(subtitle):
@@ -839,16 +768,11 @@ def download_subtitles(item):
             if not data_dl and not item.subtitle:
                 data_dl = httptools.downloadpage(subtitle.replace("&amp;", "&"), soup=True, headers=item.headers or {}, **kwargs)
 
-            if data_dl: 
+            if data_dl and data_dl.sucess and data_dl.data:
                 res = filetools.write(subtitle_path_name, data_dl.data)
                 if res and not item.subtitle:
                     item.subtitle = subtitle_path_name
     except Exception:
         logger.error(traceback.format_exc())
-
-    # Las tres fuentes de aqui (subdivx, subscene y subdl) guardan en esta carpeta y NINGUNA borraba
-    # nada. Se limpia igual que en get_from_opensubtitles: se queda lo recien bajado (con su .nfo) y
-    # el resto se va. Sin cache a proposito: volver a pedirlo cuesta ~1 s.
-    _limpia_subtitulos(subtitles_path, _nombres_subtitulo(item.subtitle))
 
     return item

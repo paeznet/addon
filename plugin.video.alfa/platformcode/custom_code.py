@@ -25,6 +25,10 @@ try:
     monitor = xbmc.Monitor()
 except Exception:
     monitor = None
+try:
+    window = xbmcgui.Window(10000)
+except Exception:
+    window = None
 
 PY3 = sys.version_info > (3,)
 
@@ -156,6 +160,9 @@ def init():
         round_level = 1
         if config.get_setting("current_host", default=0) < round_level:
             reset_current_host(round_level)
+        
+        # Versificamos si TOR está instalado y accesible
+        verify_tor_availability(reset=True)
 
         # Comprime la BD de cache de TMDB para evitar que crezca demasiado
         bd_tmdb_maintenance()
@@ -181,15 +188,7 @@ def init():
         filetools.rmdirtree(
             filetools.join(videolibrary_path, "temp_torrents_Alfa"), silent=True
         )
-        subtitle_path = config.get_kodi_setting("subtitles.custompath")
-        if subtitle_path and filetools.exists(subtitle_path):
-            for file in filetools.listdir(subtitle_path):
-                if not file.endswith(".srt"):
-                    continue
-                file_path = filetools.join(subtitle_path, file)
-                ret = filetools.remove(file_path, silent=True)
-                if not ret:
-                    logger.error("ERROR on REMOVING subtitle: " + file_path)
+        clean_subtitles()
 
         # Verifica si Kodi tiene algún achivo de Base de Datos de Vídeo de versiones anteriores, entonces los borra
         verify_Kodi_video_DB()
@@ -253,6 +252,94 @@ def init():
 
         cf_assistant.check_blacklist("ALL", reset=True)
 
+    except Exception:
+        logger.error(traceback.format_exc())
+
+
+def clean_subtitles():
+    """Limpia el temporal al arrancar y retira los subtitulos antiguos una vez."""
+    import os
+    import shutil
+
+    try:
+        if xbmc.Player().isPlaying():
+            return
+
+        temporary = config.get_subtitles_path()
+        # rmtree no sigue enlaces de directorio. Tampoco aceptamos una raiz enlazada.
+        if os.path.normcase(os.path.realpath(temporary)) != os.path.normcase(os.path.abspath(temporary)):
+            raise ValueError("La carpeta temporal de subtitulos es un enlace")
+        shutil.rmtree(temporary)
+
+        if config.get_setting('old_subtitles_cleaned', default=False):
+            return
+
+        protected = [filetools.join(config.get_data_path(), 'subtitles'),
+                     config.get_kodi_setting('subtitles.custompath')]
+        protected += [config.get_setting(name, default='') for name in
+                      ('subtitlepath_folder', 'subtitlepath_keyboard', 'subtitlepath_file')]
+
+        def local_path(path):
+            if not path:
+                return ''
+            path = filetools.translatePath(path)
+            if '://' in path:
+                return ''
+            return os.path.normcase(os.path.realpath(path))
+
+        protected = [local_path(path) for path in protected if path]
+        protected = [path.rstrip('/\\') for path in protected if path]
+
+        def inside(path, parent):
+            return path == parent or path.startswith(parent + os.sep)
+
+        targets = [(filetools.join(config.get_videolibrary_path(), 'subtitles'), True),
+                   (filetools.join(config.get_data_path(), 'temp_subtitles'), False),
+                   (filetools.join(config.get_data_path(), 'subtitulo_areadocu.srt'), False),
+                   (filetools.join(config.get_data_path(), 'sub_flashx.srt'), False)]
+        success = True
+        extensions = ('.srt', '.ass', '.ssa', '.sub', '.vtt', '.smi', '.txt')
+        for target, subtitles_only in targets:
+            try:
+                path = local_path(target)
+                if not path:
+                    logger.info('Subtitulos: limpieza antigua omitida en ruta remota: %s' % target)
+                    continue
+                if any(inside(path, p) or inside(p, path) for p in protected):
+                    continue
+                # Excluir raices enlazadas; os.walk tampoco seguira enlaces interiores.
+                if path != os.path.normcase(os.path.abspath(filetools.translatePath(target))):
+                    continue
+                if not os.path.exists(path):
+                    continue
+                if not subtitles_only:
+                    if os.path.isdir(path):
+                        shutil.rmtree(path)
+                    else:
+                        os.remove(path)
+                    continue
+
+                def walk_error(error):
+                    raise error
+
+                directories = []
+                for folder, dirs, files in os.walk(path, onerror=walk_error, followlinks=False):
+                    dirs[:] = [name for name in dirs if
+                               os.path.normcase(os.path.realpath(os.path.join(folder, name))) ==
+                               os.path.normcase(os.path.abspath(os.path.join(folder, name)))]
+                    directories.append(folder)
+                    for name in files:
+                        filename = os.path.join(folder, name)
+                        if name.lower().endswith(extensions) and not os.path.islink(filename):
+                            os.remove(filename)
+                for folder in reversed(directories):
+                    if not os.listdir(folder):
+                        os.rmdir(folder)
+            except Exception:
+                success = False
+                logger.error(traceback.format_exc())
+        if success:
+            config.set_setting('old_subtitles_cleaned', True)
     except Exception:
         logger.error(traceback.format_exc())
 
@@ -1760,22 +1847,87 @@ def force_intelligent_titles():
 def set_updated_domains():
     logger.info()
 
-    try:
-        if not PY3:
-            from lib.alfaresolver import get_cached_files
-        else:
-            from lib.alfaresolver_py3 import get_cached_files
-        window = xbmcgui.Window(10000) or None
+    if window:
+        try:
+            if not PY3:
+                from lib.alfaresolver import get_cached_files
+            else:
+                from lib.alfaresolver_py3 import get_cached_files
 
-        alfa_domains_updated = get_cached_files("domains") or {}
-        if window: window.setProperty("alfa_domains_updated", jsontools.dump(alfa_domains_updated))
+            alfa_domains_updated = get_cached_files("domains") or {}
+            window.setProperty("alfa_domains_updated", jsontools.dump(alfa_domains_updated))
 
-        if window and is_alfa_installed():
-            window.setProperty("is_assistant_installed", "True")
+            if is_alfa_installed():
+                window.setProperty("is_assistant_installed", "True")
 
-    except Exception:
-        logger.error(traceback.format_exc())
-        window.setProperty("alfa_domains_updated", jsontools.dump({}))
+        except Exception:
+            logger.error(traceback.format_exc())
+            window.setProperty("alfa_domains_updated", jsontools.dump({}))
+
+
+def verify_tor_availability(strict=False, reset=False, alfa_s=False):
+
+    if window:
+        proxy_TOR = ''
+        proxy_TOR_save = window.getProperty("alfa_cached_TOR_proxy")
+        window.setProperty("alfa_cached_TOR_proxy", "NO")
+
+        try:
+            import socks
+            import requests
+            from lib.generictools import get_cached_files_
+
+            PASSWORDS = get_cached_files_("password", FORCED=True)
+            regex = PASSWORDS.get('cookies', {}).get('caching', {}).get('titles_regex', {})
+
+            url_TOR_test = regex.get("btdig_url_TOR_test", ["https://check.torproject.org/api/ip", 
+                                                            "https://www.google.com/generate_204"])
+            if strict and isinstance(url_TOR_test, (list, tuple)) and len(url_TOR_test) > 1:
+                url_TOR_test = [url_TOR_test[0]]
+
+            proxy_TOR = regex.get('btdig_server_TOR', '127.0.0.1')
+            port_TOR = regex.get('btdig_port_TOR', ["9050", "9150"])
+            port_TOR = port_TOR[1] if config.get_system_platform() == 'windows' else port_TOR[0]
+            proxies_TOR = ['%s:%s' % (proxy_TOR, port_TOR)]
+            sockt_TOR = regex.get("btdig_sockt", "socks5h")
+
+            tor_proxy = config.get_setting('tor_proxy', server='torrent', default='')
+            if tor_proxy:
+                proxies_TOR = [prox.strip() for prox in tor_proxy.split(',') if prox.strip()]
+
+            for url in url_TOR_test:
+                for prox in proxies_TOR:
+                    proxy_TOR = prox if '://' in prox else '%s://%s' % (sockt_TOR, prox)
+                    port_TOR = proxy_TOR.split(':')[-1]
+                    try:
+                        r = requests.get(url, proxies={'https': proxy_TOR, 'http': proxy_TOR}, timeout=(3, 10))
+                        if r.ok:
+                            if not alfa_s or proxy_TOR != proxy_TOR_save:
+                                logger.info("Tor accesible: %s" % proxy_TOR, force=True)
+                            window.setProperty("alfa_cached_TOR_proxy", proxy_TOR)
+
+                            if reset:
+                                try:
+                                    if not PY3: from core.proxytools import new_tor_identity
+                                    else: from core.proxytools_py3 import new_tor_identity
+                                    res = new_tor_identity(proxy=proxy_TOR)
+                                except Exception as e:
+                                    logger.info('TOR no acepta new_tor_identity: %s: %s' % (str(e), proxy_TOR), force=True)
+
+                            break
+                        else:
+                            if not alfa_s or proxy_TOR != proxy_TOR_save: 
+                                logger.info('TOR no está disponible: Error: %s: %s' % (r.status_code, proxy_TOR), force=True)
+                    except Exception as e:
+                        logger.info('TOR no está disponible: Error: %s: %s' % (str(e), proxy_TOR), force=True)
+
+                if window.getProperty("alfa_cached_TOR_proxy") != "NO":
+                    break
+
+        except Exception as e:
+            window.setProperty("alfa_cached_TOR_proxy", "NO")
+            logger.info('TOR no está disponible: Error: %s: %s' % (str(e), proxy_TOR), force=True)
+            logger.error(traceback.format_exc())
 
 
 def set_season_holidays():
