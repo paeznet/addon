@@ -92,7 +92,7 @@ def lista(item):
     soup = create_soup(item.url)
     matches = soup.find_all('div', class_='thumb-bl-video')
     for elem in matches:
-        logger.debug(elem)
+        if elem.script: continue
         url = elem.a['href']
         title = elem.a['title']
         thumbnail = elem.img['src']
