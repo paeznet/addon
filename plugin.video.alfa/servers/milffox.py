@@ -2,6 +2,7 @@
 import re
 from core import httptools
 from core import scrapertools
+from core import urlparse
 from platformcode import logger
 
 
@@ -17,14 +18,38 @@ def test_video_exists(page_url):
 def get_video_url(page_url, video_password):
     logger.info("(page_url='%s')" % page_url)
     video_urls = []
-    # data = httptools.downloadpage(page_url).data
-    # patron = '"video(?:_alt|)_url":\s*"([^"]+)"'
-    patron = "video(?:_alt|)_url:\s*'([^']+)'"
-    matches = re.compile(patron,re.DOTALL).findall(data)
-    for url in matches:
-        url = url.replace("\/", "/")
-        if "sd" in url: quality="SD"
-        if "hd" in url: quality="HD"
-        video_urls.append(["[milffox] %s" %quality, url])
-    return video_urls
-
+    
+    global data
+    
+    if not data:
+        data = httptools.downloadpage(page_url).data
+    
+    bloque = scrapertools.find_single_match(data, r'videoFile:([^;]+);')
+    pares = re.findall(r'\[(\d+p)\]([^"\']+)', bloque)
+    
+    for quality, url in pares:
+        url = url.strip().strip(',').strip()
+        
+        if not url:
+            continue
+        
+        if url.startswith('//'):
+            url = 'https:' + url
+        elif not url.startswith('http'):
+            url = urlparse.urljoin(page_url, url)
+        
+        try:
+            location = httptools.downloadpage(url, headers={'Referer': page_url},
+                                              follow_redirects=False,
+                                              only_headers=True).headers.get('location', '')
+        except Exception as e:
+            logger.error("[milffox] no se pudo resolver %s (%s)" % (url, str(e)[:80]))
+            location = ''
+        
+        if location:
+            url = location
+        
+        cabeceras = '|Referer=%s&User-Agent=%s' % (page_url, httptools.get_user_agent())
+        video_urls.append(["[milffox] %s" % quality, url + cabeceras])
+    
+    return video_urls[::-1]

@@ -59,12 +59,14 @@ def categorias(item):
         url = elem.a['href']
         title = elem.a['title']
         thumbnail = elem.img['src']
+        if "base64" in thumbnail: thumbnail = elem.img['data-original']
         url = urlparse.urljoin(item.url,url)
         cantidad = elem.find('div', class_='thumb-total')
         if cantidad:
             title = "%s (%s)" % (title,cantidad.text.strip())
         if not thumbnail.startswith("https"):
             thumbnail = "https:%s" % thumbnail
+        
         itemlist.append(Item(channel=item.channel, action="lista", title=title, url=url,
                               fanart=thumbnail, thumbnail=thumbnail) )
     next_page = soup.find('li', class_='pagination-next')
@@ -101,6 +103,16 @@ def lista(item):
             thumbnail = elem.img['data-original']
         if not thumbnail.startswith("http"):
             thumbnail = "https:%s" % thumbnail
+        time = elem.li.text.strip() if elem.find('i', class_='fa-clock-o') else ''
+        canal = elem.find('a', href=re.compile("/channels/[A-z0-9-]+/"))['title'] if elem.find('a', href=re.compile("/channels/[A-z0-9-]+/")) else ''
+        pornstars = elem.find_all('a', href=re.compile("/pornstars/[A-z0-9-]+/")) if elem.find_all('a', href=re.compile("/pornstars/[A-z0-9-]+/")) else ''
+        if pornstars:
+            for x , value in enumerate(pornstars):
+                pornstars[x] = value.text.strip()
+            pornstar = ' & '.join(pornstars)
+            # pornstar = "[COLOR cyan]%s[/COLOR]" % pornstar
+        
+        title = "[COLOR yellow]%s[/COLOR] [COLOR gold][%s][/COLOR] [COLOR cyan]%s[/COLOR] %s" % (time, canal,pornstar,title)
         plot = ""
         url = urlparse.urljoin(item.url,url)
         action = "play"
@@ -127,15 +139,15 @@ def findvideos(item):
 def play(item):
     logger.info()
     itemlist = []
-    soup = create_soup(item.url)
-    pornstars = soup.find('div', class_='video-info').find_all('a', href=re.compile("/pornstars/"))
-    for x , value in enumerate(pornstars):
-        pornstars[x] = value.text.strip()
-    pornstar = ' & '.join(pornstars)
-    pornstar = "[COLOR cyan]%s[/COLOR]" % pornstar
-    lista = item.contentTitle.split()
-    lista.insert (0, pornstar)
-    item.contentTitle = ' '.join(lista)    
+    # soup = create_soup(item.url)
+    # pornstars = soup.find('div', class_='video-info').find_all('a', href=re.compile("/pornstars/"))
+    # for x , value in enumerate(pornstars):
+        # pornstars[x] = value.text.strip()
+    # pornstar = ' & '.join(pornstars)
+    # pornstar = "[COLOR cyan]%s[/COLOR]" % pornstar
+    # lista = item.contentTitle.split()
+    # lista.insert (0, pornstar)
+    # item.contentTitle = ' '.join(lista)    
     itemlist.append(Item(channel=item.channel, action="play", title= "%s", contentTitle = item.contentTitle, url=item.url))
     itemlist = servertools.get_servers_itemlist(itemlist, lambda i: i.title % i.server.capitalize())
     return itemlist

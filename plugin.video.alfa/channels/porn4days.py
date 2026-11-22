@@ -20,6 +20,7 @@ list_servers = []
     # const SERVER2_URL = "https://turbovidhls.com/t/6999c3e74a0b9";
     # const SERVER3_URL = "https://hgcloud.to/e/aryz40rcfhcs";
 
+#  https://porn4days.pw/  https://321tube.com/   https://movie4days.com/
 
 canonical = {
              'channel': 'porn4days', 
@@ -115,7 +116,6 @@ def lista(item):
     soup = create_soup(item.url)
     matches = soup.find_all('div', class_='video-card')
     for elem in matches:
-        # logger.debug(elem)
         url = elem.a['href']
         title = elem.img['alt']
         thumbnail = elem.img['src']

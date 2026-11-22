@@ -20,15 +20,12 @@ def test_video_exists(page_url):
     post_url= "https://api.bitchute.com/api/beta/video/media"
     id = page_url.split("embed/")[-1]
     post = {"video_id": id}
-<<<<<<< HEAD
-    data = httptools.downloadpage(post_url, post=json.dumps(post)).json
-=======
-    headers = {'Content-Type': 'application/json', 'Referer': page_url, 'Origin': server}
+    # headers = {'Content-Type': 'application/json', 'Referer': page_url, 'Origin': server}
+    headers = {}
     response = httptools.downloadpage(post_url, post=json.dumps(post), headers=headers)
     if response.code != 200 or not isinstance(response.json, dict) or not response.json.get('media_url'):
         return False, "[bitchute] No se pudo obtener el enlace del vídeo"
     data = response.json
->>>>>>> alfa-addon/main
     logger.debug(data)
     
     return True, ""

@@ -13,3 +13,5 @@ last_fix.json
 plugin.video.alfa/channels/okxxx.py
 
 **/.syncmetadata
+
+plugin.video.alfa/lib/unshortenit.py

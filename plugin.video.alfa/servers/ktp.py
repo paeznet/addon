@@ -23,6 +23,9 @@ kwargs = {'set_tls': None, 'set_tls_min': False, 'retries_cloudflare': 6, 'ignor
 NAVEGADOR = ('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
              '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36')
 
+# Se rellena en test_video_exists(); aqui solo para que nunca falte el nombre
+host = ''
+
 # https://trahkino.cc/video/353484/ necesita "False"
 # https://www.porn00.org/ necesita "None"
 #  generate_mp4  ENCRYPT  https://www.porngrey.net/video/charlie-red-enjoys-anal-in-a-wild-gonzo-scene_v1/  
@@ -37,7 +40,8 @@ def _generar_mp4(page_url, data):
     """
     try:
         from lib.kt_player import saca_generate_mp4, descifra_token, url_okru, MAPA_CALIDADES_OKRU
-    except ImportError:
+    except ImportError as e:
+        logger.error("ktp: faltan las funciones de generate_mp4 en lib/kt_player.py: %s" % str(e)[:80])
         return []
 
     piezas = saca_generate_mp4(data)
@@ -59,6 +63,7 @@ def _generar_mp4(page_url, data):
     try:
         respuesta = httptools.downloadpage(url_okru(token, vids),
                                            headers={'User-Agent': NAVEGADOR,
+                                                     'Referer': host or 'https://ok.ru/',
                                                      'Accept': 'application/json, text/plain, */*'},
                                            ignore_response_code=True, timeout=20)
         cuerpo = respuesta.data
@@ -100,6 +105,10 @@ def _generar_mp4(page_url, data):
             nombre = clave_v.replace('url_', '')
             if isinstance(valor, str) and valor.startswith('http'):
                 salida.append([MAPA_CALIDADES_OKRU.get(nombre, nombre), valor])
+    # De menor a mayor calidad, como el resto del conector
+    salida.sort(key=lambda par: int(re.sub(r'\D', '', par[0]) or 0))
+    if salida:
+        logger.info("ktp: %d calidad(es) obtenidas de OK.RU via generate_mp4" % len(salida))
     return salida
 
 
@@ -154,11 +163,26 @@ def get_video_url(page_url, premium=False, user="", password="", video_password=
         patron = 'video_url:\s*(?:\'|")([^\,]+)(?:\'|").*?'
         patron += 'postfix:\s*(?:\'|")([^\,]+)(?:\'|")'
     matches = re.compile(patron,re.DOTALL).findall(data)
-    logger.debug(matches)
+    
     for url, quality in matches:
         if "?login" not in url and "signup" not in url and "_preview" not in url and ".mp4" in url:
             if "function/" in url:
-                url = decode(url, license_code)
+                # Camino clasico (sin OK.RU): KVS ofusca el hash del get_file usando el
+                # license_code de la pagina. Si el descifrado falla, esa calidad no sirve
+                # para nada; se descarta en vez de reventar el conector entero.
+                if not license_code:
+                    logger.error("ktp: URL 'function/' sin license_code: %s" % url[:80])
+                    continue
+                try:
+                    descifrada = decode(url, license_code)
+                except Exception as e:
+                    logger.error("ktp: fallo descifrando '%s': %s" % (url[:70], str(e)[:60]))
+                    continue
+                if descifrada == url:
+                    logger.error("ktp: no se pudo descifrar '%s' (license_code=%r)"
+                                 % (url[:70], license_code))
+                    continue
+                url = descifrada
             elif url.startswith("/get_file/"):
                 url = urlparse.urljoin(page_url, url)
             if "SD" in quality and not "Full" in quality:
@@ -188,13 +212,16 @@ def get_video_url(page_url, premium=False, user="", password="", video_password=
     elif "false" in invert:
         return video_urls
     else:
-        video_urls.sort(key=lambda item: int( re.sub("\D", "", item[0])))
+        # Un video_url_text sin digitos (vacio, 'SQ'...) hacia int('') -> ValueError y se
+        # perdian TODAS las calidades del sitio. Con el "or 0" se quedan las primeras.
+        # (Ojo: '.mp4' sí lleva un 4, por eso esos sitios no fallaban.)
+        video_urls.sort(key=lambda item: int(re.sub(r"\D", "", item[0]) or 0))
     
     if not url:
         url = scrapertools.find_single_match(data, '(?:video_url|video_alt_url|video_alt_url[0-9]*):\s*(?:\'|")([^\,]+)(?:\'|").*?')
         if "allclassic.porn" in url:
             url = httptools.downloadpage(url, follow_redirects=False, only_headers=True, **kwargs).headers.get("location", "")
-        if not "allclassic.porn":
+        if "allclassic.porn" not in url:
             url = alfa_urlparse.add_url_headers(url, {'Referer': u'{}'.format(host)})
         
         video_urls.append(['[ktplayer]', url])

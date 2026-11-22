@@ -47,15 +47,17 @@ url_replace = []
 
 finds = {
          'find': {'find_all': [{'tag': ['div'], 'class': ['gap-3']}]},     #'id': re.compile(r"^browse_\d+")}]},
-         'categories': {'find_all': [{'tag': ['a'], 'href': [re.compile(r"/categoria/[a-z-]+")]}]},     #'id': re.compile(r"^browse_\d+")}]},
+         'categories': dict([('find', [{'tag': ['div'], 'class': ['gap-6']}]),
+                             ('find_all', [{'tag': ['a'], 'href': [re.compile(r"/categoria/[a-z-]+")]}])]),
          'search': {}, 
          'get_language': {'find': [{'tag': ['span'], 'class': ['lang']}]}, 
          'get_language_rgx': r'(?:flags\/||d{4}\/\d{2}\/)(\w+)\.(?:png|jpg|jpeg|webp)', 
          'get_quality': {}, 
          'get_quality_rgx': '', 
          'next_page': {}, 
-         'next_page_rgx': [['\/\d+', '/%s'], [r'page=\d+', 'page=%s']], 
-         'last_page': dict([('find', [{'tag': ['nav'], 'class': ['flex gap-2']}]), 
+         'next_page_rgx': [['&page=\d+', '&page=%s']], 
+         'last_page': {}, 
+         'last_page': dict([('find', [{'tag': ['nav'], 'aria-label': ['Paginacion']}]), 
                             ('find_all', [{'tag': ['a'], '@POS': [-1], 
                                            '@ARG': 'href', '@TEXT': r'page[/=](\d+)'}])]), 
          'year': {'find': [{'tag': ['span'], 'class': ['year']}], 'get_text': [{'tag': '', '@STRIP': True, '@TEXT': r'(\d+)'}]}, 
@@ -92,11 +94,13 @@ def mainlist(item):
     
     itemlist.append(Item(channel=item.channel, title='Estrenos', action='list_all', url=alfa_urlparse.build_url(host, 'estrenos.html', query='q=&a=8&page=1'), #
                          thumbnail=get_thumb('movies', auto=True), c_type='peliculas'))
-    itemlist.append(Item(channel=item.channel, title='Peliculas', action='list_all', url=alfa_urlparse.build_url(host, 'inc/php/buscar.php', query='q=&a=0&sort=recent&page=1'), #
+    itemlist.append(Item(channel=item.channel, title='Peliculas', action='list_all', url=alfa_urlparse.build_url(host, 'buscar/', query='q=&a=0&sort=recent&page=1'), #
                          thumbnail=get_thumb('movies', auto=True), c_type='peliculas'))
-    itemlist.append(Item(channel=item.channel, title='Mas Vistas', action='list_all', url=alfa_urlparse.build_url(host, 'inc/php/buscar.php', query='q=&a=0&sort=views&page=1'), #
+    itemlist.append(Item(channel=item.channel, title='Mas Vistas', action='list_all', url=alfa_urlparse.build_url(host, 'buscar/', query='q=&a=0&sort=views&page=1'), #
                          thumbnail=get_thumb('movies', auto=True), c_type='peliculas'))
-    itemlist.append(Item(channel=item.channel, title="Géneros", action="section", url=host, 
+    itemlist.append(Item(channel=item.channel, title='Mejor Valoradas', action='list_all', url=alfa_urlparse.build_url(host, 'buscar/', query='q=&a=0&sort=rating&page=1'), #
+                         thumbnail=get_thumb('movies', auto=True), c_type='peliculas'))
+    itemlist.append(Item(channel=item.channel, title="Géneros", action="section", url=host + "categorias/", 
                          thumbnail=get_thumb('genres', auto=True), extra='generos'))
     itemlist.append(Item(channel=item.channel, title="Año", action="anno", url=host, 
                          thumbnail=get_thumb('year', auto=True), extra='generos'))
@@ -128,9 +132,8 @@ def section_matches(item, matches_int, **AHkwargs):
         
         try:
             url = elem.get("href", '')
-            url = scrapertools.find_single_match(url, 'categoria/([a-z-]+)')
-            elem_json['url'] = alfa_urlparse.build_url(item.url, 'inc/php/buscar.php', query=[('q', u'{}'.format(url)), ('a', '3'), ('page', '1')])
-            elem_json['title'] = elem.get_text(strip=True).replace('folder', '')
+            elem_json['url'] = alfa_urlparse.build_url(url, query=[('sort', 'recent'), ('page', '1')])
+            elem_json['title'] = elem.find(class_='line-clamp-1').get_text(strip=True).replace('folder', '')
                                                                 
             if elem.img: elem_json['thumbnail'] = elem.img.get('data-thumb_url', '') or elem.img.get('data-original', '') \
                                                                                      or elem.img.get('data-src', '') \
@@ -156,7 +159,7 @@ def anno(item):
     now = datetime.now()
     year = int(now.year)
     while year >= 1937:
-        itemlist.append(item.clone(title="%s" %year, action="list_all", url= alfa_urlparse.build_url(item.url, 'buscar/', query=[('q', u'{}'.format(year)), ('a', '1'), ('page', '1')]), c_type='peliculas'))
+        itemlist.append(item.clone(title="%s" %year, action="list_all", url= alfa_urlparse.build_url(item.url, 'ano/%s.html' %year, query=[('sort', 'recent'), ('page', '1')]), c_type='peliculas'))
         year -= 1
     
     return itemlist
@@ -165,7 +168,10 @@ def anno(item):
 def list_all(item):
     logger.info()
     
-    return AlfaChannel.list_all(item, matches_post=list_all_matches, **kwargs)
+    findS = finds.copy()
+    item.last_page = 9999
+    
+    return AlfaChannel.list_all(item, finds=findS, matches_post=list_all_matches, **kwargs)
 
 
 def list_all_matches(item, matches_int, **AHkwargs):
@@ -185,7 +191,7 @@ def list_all_matches(item, matches_int, **AHkwargs):
             # if item.c_type == 'series' and movie_path in elem_json['url']: continue
             elem_json['title'] = elem.img.get("alt", "")
             elem_json['thumbnail'] = elem.img['src']
-            elem_json['year'] = elem.find('div', class_='gap-2').find('span').get_text(strip=True) if elem.find('div', class_='gap-2').find('span') else ''
+            elem_json['year'] = elem.find('div', class_='tp-movie-meta').find('span').get_text(strip=True) if elem.find('div', class_='tp-movie-meta').find('span') else ''
         except Exception:
             logger.error(elem)
             logger.error(traceback.format_exc())
@@ -248,7 +254,7 @@ def search(item, texto, **AHkwargs):
     try:
         _url_query_texto = texto
         texto = texto.replace(" ", "+")
-        item.url = alfa_urlparse.build_url(item.url, 'inc/php/buscar.php', query=[('q', u'{}'.format(_url_query_texto)), ('a', '0'), ('sort', 'recent'), ('page', '1')])
+        item.url = alfa_urlparse.build_url(item.url, 'buscar/', query=[('q', u'{}'.format(_url_query_texto)), ('sort', 'recent'), ('page', '1')])
         
         if texto:
             item.c_type = "search"
